@@ -12129,3 +12129,5 @@ the master key.
 **Records.** The review is on `main` with a provenance blockquote, and the reply is
 `KUMO-Security-Review-Adversarial-Read-Response.md`. Its Retrace entry was again not imported — it numbers
 itself 394, which is the number this entry takes, and the two would collide in the same way as before.
+### Prompt 395 — Round 2 of the Kumo vault key adversarial read
+Verified d7c7fc89 by reading; found the mismatch warning writes only to dev-errors.log, invisible in Azure. Wrote `KUMO-Security-Review-Adversarial-Read-Round-2.md`. No code changed.
