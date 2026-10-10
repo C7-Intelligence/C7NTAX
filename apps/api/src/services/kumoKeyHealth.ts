@@ -10,6 +10,10 @@
  * tickets correctly and cannot open the vault is more useful, and more diagnosable, than one that will not
  * start. The point is to have the log say what is wrong before a technician finds it.
  *
+ * It goes to **console as well as the log file**, because `logger.warn` writes only to `dev-errors.log`
+ * inside the container and Azure Container Apps forwards only stdout and stderr to Log Analytics. A warning
+ * nobody can read is not a warning, and this is the one that matters most.
+ *
  * Prisma is imported at the point of use, because index.ts imports this module and would otherwise still be
  * assembling its exports.
  */
@@ -22,10 +26,17 @@ const SAMPLE_SIZE = 20;
 export async function warnIfKeyCannotOpenVault(): Promise<void> {
   try {
     const { prisma } = await import("../index");
-    const rows = await prisma.kumoPassword.findMany({
-      select: { encryptedPassword: true, iv: true, authTag: true },
-      take: SAMPLE_SIZE,
-    });
+    // Ordered, so the sample is the same set on every restart and two log lines are comparable. A vault
+    // holding rows from two generations is exactly when the count is worth watching, and an unordered
+    // sample would make the count wobble for no reason.
+    const [rows, total] = await Promise.all([
+      prisma.kumoPassword.findMany({
+        select: { encryptedPassword: true, iv: true, authTag: true },
+        orderBy: { id: "asc" },
+        take: SAMPLE_SIZE,
+      }),
+      prisma.kumoPassword.count(),
+    ]);
 
     // An empty vault agrees with any key, which is the state of a first deploy.
     if (rows.length === 0) return;
@@ -42,13 +53,16 @@ export async function warnIfKeyCannotOpenVault(): Promise<void> {
     if (opened === rows.length) return;
 
     const { source, fingerprint } = kumoKeyStatus();
-    logger.warn(
-      "startup",
-      `the vault key from ${source} (fingerprint ${fingerprint}) opened ${opened} of ${rows.length} sampled ` +
-        `passwords. Reveals will fail for the rest. This is what a rotated key or a database restored from ` +
-        `before a rotation looks like: the key is well formed but is not the one the data was written under. ` +
-        `Do not re-encrypt in response to this until you have established which key the data belongs to.`
-    );
+    const scope = rows.length < total ? `${rows.length} of ${total}` : `${rows.length}`;
+    const message =
+      `[KumoCrypto] the vault key from ${source} (fingerprint ${fingerprint}) opened ${opened} of ${scope} ` +
+      `stored passwords. Reveals will fail for the rest. This is what a rotated key, or a database restored ` +
+      `from before a rotation, looks like: the key is well formed but is not the one the data was written ` +
+      `under. Run \`pnpm kumo:reencrypt\` — a dry run, it writes nothing — to see which generations the rows ` +
+      `belong to before changing anything, and do not pass --apply until those counts make sense.`;
+
+    logger.warn("startup", message);
+    console.warn(message);
   } catch {
     // A check that cannot run must never affect startup.
   }

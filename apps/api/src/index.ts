@@ -96,7 +96,11 @@ if (process.env.NODE_ENV === "production" && (!process.env.JWT_SECRET || process
   );
 }
 if (!process.env.JWT_SECRET) {
-  logger.info("startup", "JWT_SECRET is unset — using the development secret. Never do this outside a dev machine.");
+  // Console as well as the log file: logger.info writes only to dev-errors.log, and a container forwards
+  // only stdout and stderr, so a security warning recorded in a file is one nobody reads.
+  const message = "[C7NTAX] JWT_SECRET is unset — using the development secret. Never do this outside a dev machine.";
+  logger.info("startup", message);
+  console.warn(message);
 }
 // ── Vault key ───────────────────────────────────────────────────────
 // Resolves KUMO_MASTER_KEY and refuses to start in production without one, rather than deriving the
