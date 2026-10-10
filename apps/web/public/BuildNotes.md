@@ -1,5 +1,5 @@
 # C7NTAX — Feature List Summary
-## Version: 2026.10.10.019 | Last Updated: 2026-10-10
+## Version: 2026.10.10.020 | Last Updated: 2026-10-10
 
 ---
 
@@ -14,6 +14,31 @@
 
 ---
 
+## 2026.10.10.020 — A warning nobody could read, and the two sentences around it
+
+Round 2 of the adversarial read found one real problem: the new vault-key mismatch warning went through
+`logger.warn`, which appends to `dev-errors.log` and nothing else, so in a container it reached no log at all.
+
+- **[Fix]** **The mismatch warning now reaches the console as well as the log file**, so Azure Container Apps
+  forwards it to Log Analytics. This matters because the case it exists to catch — a rotated Key Vault value, or a
+  database restored from before a rotation — can only happen in production, which is the one place the file
+  channel does not reach.
+- **[Fix]** **The same defect on the warning beside it.** `JWT_SECRET is unset — using the development secret` used
+  `logger.info`, so it has been invisible in production for as long as it has existed. It is a security warning
+  about the secret that also derives the vault key, and it sits in the same assertion block. Outside the review's
+  scope and fixed anyway, because a half-correct block is worse than a consistent one.
+- **[Fix]** **The warning's closing sentence was wrong for a mixed vault.** "Do not re-encrypt until you know which
+  key the data belongs to" is right for a rotated key and wrong when rows sit on two generations, where the dry
+  run *is* the diagnostic. It now points at `pnpm kumo:reencrypt` and says not to pass `--apply` until the counts
+  make sense.
+- **[Fix]** **The sample is ordered**, so the same rows are read on every restart and counts are comparable; and
+  it now says "20 of 2387" when the sample is partial, so a reader knows whether they are seeing the whole vault.
+
+**Verification:** `writeLine` confirmed to write only to the log file, and the warning confirmed on the process's
+console output under a well-formed wrong key — `opened 0 of 5 stored passwords`, identical across two runs.
+`probe:kumo-key` 14/14, `tsc --noEmit` clean, and the restarted API reveals 5/5 passwords under the master key.
+
+---
 ## 2026.10.10.019 — The adversarial read's four findings, fixed and proved
 
 A review of the vault key fix found one missed key generation, one race, one partial-row hazard and one gap in

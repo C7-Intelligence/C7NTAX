@@ -1,5 +1,28 @@
 [
   {
+    "version": "2026.10.10.020",
+    "date": "2026-10-10",
+    "title": "A warning nobody could read, and the two sentences around it",
+    "changes": [
+      {
+        "text": "**The mismatch warning now reaches the console as well as the log file**, so Azure Container Apps",
+        "type": "Fix"
+      },
+      {
+        "text": "**The same defect on the warning beside it.** `JWT_SECRET is unset — using the development secret` used",
+        "type": "Fix"
+      },
+      {
+        "text": "**The warning's closing sentence was wrong for a mixed vault.** \"Do not re-encrypt until you know which",
+        "type": "Fix"
+      },
+      {
+        "text": "**The sample is ordered**, so the same rows are read on every restart and counts are comparable; and",
+        "type": "Fix"
+      }
+    ]
+  },
+  {
     "version": "2026.10.10.019",
     "date": "2026-10-10",
     "title": "The adversarial read's four findings, fixed and proved",

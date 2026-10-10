@@ -12129,3 +12129,75 @@ the master key.
 **Records.** The review is on `main` with a provenance blockquote, and the reply is
 `KUMO-Security-Review-Adversarial-Read-Response.md`. Its Retrace entry was again not imported — it numbers
 itself 394, which is the number this entry takes, and the two would collide in the same way as before.
+
+---
+
+### Prompt 395 — Round 2 of the vault key read: a warning nobody could read
+
+**Timestamp:** 2026-10-10 15:58 | **Status:** Complete | **Duration:** —
+
+**BuildNotes IDs:** **2026.10.10.020** — A warning nobody could read, and the two sentences around it.
+
+**Prompt**
+
+> Claude's response. Review, Update, and repy here. GOing forward, I say Claude's response/reply, etc. Assume you need to review, update, and reply. Always make sure you reply here so I can copy and paste. And address responses to Claude
+>
+> All four of my recommendations are in as described, but the new mismatch warning won't be visible in production. I read the fix on `main` (commit `d7c7fc89`) and did not run the probe, the job or a database. My write-up is `KUMO-Security-Review-Adversarial-Read-Round-2.md` on branch `claude/kumo-vault-key-round-2`, pushed and logged in `Retrace.md` as Prompt 395.
+> **Confirmed by reading:** long hex keys; the race; partial rows, including that a bare secret breaks under the correct key too; degenerate keys; and both declined items, which it accepts.
+> **One real problem.** The startup trial-decrypt writes its warning through `logger.warn`, which only appends to `dev-errors.log` inside the container. Azure Container Apps sends only stdout and stderr to Log Analytics, so in production nobody sees it. The fix is one line: also emit it with `console.warn`, as the key-source warning already does. It doesn't need the bigger admin-screen change Deepseek ruled out.
+> Two smaller points. The warning tells operators not to re-encrypt, which is wrong for a vault holding rows from two key generations, where the dry-run job is the remedy. And the sample of 20 rows has no ordering, so counts can differ between restarts.
+
+**The one real problem was right, and it was right about the part I had already seen and chosen to under-describe.**
+I had disclosed that `logger.warn` writes only `dev-errors.log` and filed it as a limitation of the existing
+logging channel. That framing was the defect: a file inside a container is not a weaker channel, it is no channel,
+and the case this warning exists to catch can only happen in production. I confirmed it at the source rather than
+accepting it — `writeLine` is `fs.appendFileSync(LOG_FILE, line + "\n")` and nothing else, and the only `console`
+calls in `logger.ts` are the banner and the two `[FATAL]` handlers.
+
+**Fixed, and verified on the console rather than assumed.** With a well-formed wrong key the line now appears in
+the process's console output — `opened 0 of 5 stored passwords`, with the fingerprint — which is what a container
+forwards to Log Analytics.
+
+**And the same defect two lines above mine, fixed as well because leaving it would have been indefensible once
+seen.** `JWT_SECRET is unset — using the development secret` went through `logger.info`, so it has been invisible
+in production for as long as it has existed, in the same assertion block this work already edited. That is outside
+the review's scope and it is flagged as such in the reply and the records. The generalisation is worth keeping:
+**a security warning written to a channel nobody reads is not a weaker control, it is no control** — which is
+exactly the shape of the original defect, where the startup line reported success while the master key was
+ignored. Anything in the startup assertion block belongs on the console.
+
+**The remedy sentence is reworded and the reviewer's reasoning was better than mine.** "Do not re-encrypt until
+you have established which key the data belongs to" is right for a rotated key and wrong for a vault holding rows
+from two generations, where the dry run *is* the diagnostic. It now names `pnpm kumo:reencrypt` as the next step
+and warns only against `--apply` before the counts make sense.
+
+**The sample is ordered and its frame is stated.** `orderBy: { id: "asc" }`, so a mixed vault reports comparable
+counts across restarts, and the message now reads "20 of 2387" when the sample is partial — a reader should know
+whether they are looking at the whole vault or a slice of it. Verified by running the check twice with the same
+wrong key: both runs reported `0 of 5`.
+
+**An incident worth recording, because it is a property of the codebase rather than of this change.** While
+verifying the console output I wrote a scratch script that imported the health check, which reaches Prisma through
+`await import("../index")` — the cycle-avoidance pattern `services/mfaPolicy.ts` established. That import **starts
+the whole API**. The scratch process bound port 4000, the dev server's next hot-restart failed with `EADDRINUSE`,
+its crash guard exited the child, and the watcher was left alive with nothing listening on 4000. The next health
+check is what surfaced it; I cleared the orphan and restarted the server, then confirmed 5/5 reveals. It is
+recorded because **any probe or test that touches `kumoKeyHealth` or `mfaPolicy` will try to start a server**, and
+the next person to write one against either should be told that rather than discover it. The verification above
+was redone with a self-terminating process as a result.
+
+**Records.** The review is on `main` with a provenance blockquote and the reply is
+`KUMO-Security-Review-Adversarial-Read-Round-2-Response.md`. Its Retrace entry was not imported, as before: it
+numbers itself 395, which is the number this entry takes.
+
+**The code changes for this round landed in an auto-sync commit, not in this one.** The repository's auto-sync
+watcher fired at 15:54 and committed `apps/api/src/index.ts` and `apps/api/src/services/kumoKeyHealth.ts` as
+`d19eafae auto-sync: 2026-10-10 15:54:41`, before the records were written, so the descriptive message for
+this round covers only the documents. Worth stating plainly rather than leaving a reader to wonder why a
+security fix has no commit message that explains it; the files are correct in `HEAD` and the review, the reply
+and this entry carry the reasoning. It is also the second time this session that a commit has appeared without
+me making it, which is worth knowing about the environment.
+
+**A note on working method, since the user asked for it explicitly.** From here, every reviewer message gets a
+review, an update, and a reply written in the chat for copy-paste, addressed to the reviewer. That is now the
+standing instruction rather than something to be inferred from each message.
