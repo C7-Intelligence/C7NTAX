@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<!--
+  MOCKUP ONLY — nothing in the application has been changed.
+
+  The Analytics section, reimagined in BOTH interfaces. Today it is one bar chart and two cards
+  (apps/web/src/pages/Reports.tsx → AnalyticsTab): it fetches exactly one of the twelve datasets the API
+  already serves — /reports/data/revenue-summary — and draws a bar chart whose bars have no width
+  constraint, so they render as full-height blocks. The twelve measures the platform already computes,
+  the four dimensions it already groups by, and the data-quality notes it already writes are all
+  unreachable from the screen.
+
+  Proposed: a measure-first workspace. Every figure is a NAMED MEASURE with its own definition, its
+  source, a target where one exists, and a tone. The screen states the period it applied, compares with
+  the period before it, and — this is the part no PSA dashboard does — prints the limitations the API
+  itself reports, in the same voice the API uses: "5 of the 191 listed entries carry no rate", "Not
+  measured — give the report a date range". A dashboard that silently shows 100% margin because no cost
+  rate is set is worse than one that says so.
+
+  MODERN (first panel) is composed from the Modern interface's own furniture: a period strip of chips you
+  press, a rail of measures carrying their own values and tone, a sentence beside the number that says
+  what it means, a track you step along for the periods, dimension pills that re-cut the same table, a
+  sheet for a measure's definition, and a countable footer.
+
+  CLASSIC (second panel) is a form: labelled fields in a grid, a Run button, a table where the modern
+  panel has a rail, a select where the modern panel has pills, and a dialog with a heading and a Close.
+
+  EVERY FIGURE IS READ, NOT INVENTED. Read from the running instance on 10 October 2026 through
+  GET /api/reports/data/{ticket-volume,ticket-aging,sla-compliance,technician-utilization,revenue-summary,
+  time-tracking,csat,contract-profitability,client-value} with from=2026-01-01&to=2026-12-31. The labels,
+  units and the limitation sentences are quoted from those responses. Every colour below is a real token
+  copied from apps/web/src/index.css. Where a figure could not be computed it is absent and the API's own
+  reason is printed in its place.
+
+  The page is a drawing, not a prototype: the only things that move are the theme toggle and the
+  Modern/Classic switch. Reverting is deleting this file.
+-->
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup — Analytics, reimagined in both interfaces</title>
+<style>
+  /* ── The application's own tokens, copied from apps/web/src/index.css ───────────────────────── */
+  html[data-theme="dark"] {
+    --navy-50:#e8edf5; --navy-100:#c5d1e5; --navy-200:#9eb3d3; --navy-300:#7895c1; --navy-400:#5b7db3;
+    --navy-500:#3e64a5; --navy-600:#365796; --navy-700:#2b4783; --navy-800:#223771; --navy-900:#142454; --navy-950:#0a1628;
+    --cyber-50:#e0f7fe; --cyber-100:#b3edfc; --cyber-200:#80e2fa; --cyber-300:#4dd6f8; --cyber-400:#26cbf6;
+    --cyber-500:#00c0f4; --cyber-600:#00aae0; --cyber-700:#0090c4; --cyber-800:#0077a9; --cyber-900:#00507d;
+    --brand-crimson:#c00000;
+    --surface:#0f1a2e; --surface-light:#162238; --surface-lighter:#1e2d48; --surface-border:#2a3a5c;
+    --alert-red:#ef4444; --alert-amber:#f59e0b; --alert-green:#22c55e;
+    --status-new:#38bdf8; --status-open:#60a5fa; --status-progress:#fbbf24; --status-waiting-client:#c084fc;
+    --status-resolved:#4ade80; --status-closed:#9ca3af;
+    --text-primary:#ffffff; --text-secondary:#d1d5db; --text-tertiary:#9ca3af;
+    --text-muted:#8b93a1; --text-muted-alt:#7c8598;
+    --btn-primary-fg:#ffffff;
+    --nav-accent:var(--cyber-400);
+  }
+  html[data-theme="light"] {
+    --navy-50:#f5f5f5; --navy-100:#ebebeb; --navy-200:#d9d9d9; --navy-300:#b3b3b3; --navy-400:#808080;
+    --navy-500:#5c5c5c; --navy-600:#424242; --navy-700:#2b2b2b;
+    --cyber-50:#f0f9ff; --cyber-100:#e0f2fe; --cyber-200:#bae6fd; --cyber-300:#075985; --cyber-400:#0369a1;
+    --cyber-500:#0ea5e9; --cyber-600:#0284c7; --cyber-700:#0369a1;
+    --surface:#ffffff; --surface-light:#f7f7f7; --surface-lighter:#f0f0f0; --surface-border:#e2e2e2;
+    --alert-red:#dc2626; --alert-amber:#b45309; --alert-green:#15803d;
+    --status-new:#0369a1; --status-open:#1d4ed8; --status-progress:#92400e; --status-waiting-client:#6b21a8;
+    --status-resolved:#166534; --status-closed:#4b5563;
+    --text-primary:#0d0d0d; --text-secondary:#2b2b2b; --text-tertiary:#5c5c5c;
+    --text-muted:#6b7280; --text-muted-alt:#7c8598;
+    --btn-primary-fg:#ffffff;
+    --nav-accent:var(--brand-crimson);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface); color: var(--text-primary);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1340px; margin: 0 auto; padding: 22px 26px 60px; }
+
+  /* ── The two classes a reader needs, named as the stylesheet names them ────────────────────── */
+  .card { background: var(--surface-light); border: 1px solid var(--surface-border); border-radius: 12px; padding: 18px; }
+  .muted { color: var(--text-muted); }
+  .sec { color: var(--text-secondary); }
+  .h { font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+  .row { display: flex; gap: 12px; align-items: center; }
+  .between { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+
+  .btn { border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; }
+  .btn-primary { background: var(--cyber-600); color: var(--btn-primary-fg); }
+  .btn-secondary { background: transparent; color: var(--text-secondary); border-color: var(--surface-border); }
+  .input { background: var(--surface); border: 1px solid var(--surface-border); color: var(--text-primary);
+           border-radius: 8px; padding: 8px 12px; font-size: 13px; width: 100%; }
+
+  /* chips: a filter you press, carrying the count or value of what it would show */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 6px 12px;
+          border: 1px solid var(--surface-border); background: var(--surface-light); color: var(--text-secondary);
+          font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .chip--on { background: var(--cyber-600); border-color: var(--cyber-600); color: var(--btn-primary-fg); }
+  .chip__n { font-variant-numeric: tabular-nums; opacity: .85; font-weight: 700; }
+  .chip--good .dot { background: var(--alert-green); } .chip--warn .dot { background: var(--alert-amber); }
+  .chip--bad  .dot { background: var(--alert-red); }   .chip--none .dot { background: var(--text-muted); }
+  .dot { width: 7px; height: 7px; border-radius: 999px; display: inline-block; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+             color: var(--text-muted); padding: 0 10px 8px; border-bottom: 1px solid var(--surface-border); font-weight: 600; }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid var(--surface-border); color: var(--text-secondary); }
+  tbody tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-block; border-radius: 6px; padding: 2px 7px; font-size: 11px; font-weight: 700;
+           border: 1px solid currentColor; }
+
+  .good { color: var(--alert-green); } .warn { color: var(--alert-amber); } .bad { color: var(--alert-red); }
+  .accent { color: var(--cyber-400); } .dim { color: var(--text-muted); }
+
+  /* the track you step along */
+  .track { display: flex; gap: 6px; margin-top: 10px; }
+  .track span { flex: 1; height: 8px; border-radius: 3px; background: var(--surface-lighter); }
+  .track span.on { background: var(--cyber-500); }
+  .track span.low { background: var(--alert-red); }
+
+  .funnel { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
+  .funnel .step { display: grid; grid-template-columns: 132px 1fr 92px; gap: 12px; align-items: center; font-size: 13px; }
+  .funnel .bar { height: 20px; border-radius: 4px; background: var(--cyber-600); }
+  .funnel .leak { color: var(--alert-amber); }
+
+  .panel { display: none; } .panel.on { display: block; }
+  .switch { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 14px; }
+  .note { border-left: 3px solid var(--alert-amber); padding: 8px 0 8px 12px; color: var(--text-secondary); font-size: 13px; }
+  .note + .note { margin-top: 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .label { display: block; font-size: 12px; color: var(--text-tertiary); margin-bottom: 5px; font-weight: 600; }
+  .sheet { border: 1px solid var(--surface-border); border-radius: 12px; background: var(--surface-light);
+           padding: 16px; box-shadow: 0 18px 40px rgba(0,0,0,.35); }
+  .kpi { font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+  .sub { font-size: 12px; color: var(--text-muted); }
+  .domain { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted);
+            font-weight: 700; margin: 14px 0 7px; }
+  .rail { display: flex; flex-wrap: wrap; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="switch">
+  <button class="btn btn-secondary" onclick="toggleTheme()" id="themeBtn">Light theme</button>
+  <button class="btn btn-secondary" onclick="togglePanel()" id="panelBtn">Show classic</button>
+</div>
+
+<div class="wrap">
+
+  <!-- ══════════════════════════════════════════════════════════════════════════════════════════
+       MODERN
+       ══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <section class="panel on" id="modern">
+    <div class="between" style="margin-bottom:16px">
+      <div>
+        <h1 style="margin:0;font-size:20px">Analytics</h1>
+        <p class="muted" style="margin:4px 0 0">Twelve measures over the same period, each one named, sourced and dated — and told where it cannot be trusted.</p>
+      </div>
+      <div class="row">
+        <button class="btn btn-secondary">Export</button>
+        <button class="btn btn-secondary">Save this view</button>
+      </div>
+    </div>
+
+    <!-- the period you are standing in, and what it is compared with -->
+    <div class="card">
+      <div class="between">
+        <div class="chips">
+          <span class="chip">This month</span>
+          <span class="chip">Last 90 days</span>
+          <span class="chip chip--on">This year</span>
+          <span class="chip">Custom…</span>
+        </div>
+        <p class="sub" style="margin:0">1 Jan – 31 Dec 2026 · compared with 1 Jan – 31 Dec 2025</p>
+      </div>
+    </div>
+
+    <!-- the rail: every measure, with its own value and tone, grouped by what it is about -->
+    <div class="card" style="margin-top:16px">
+      <div class="between"><span class="h">Measures</span><span class="sub">A dot reports the measure against its target. No dot means no target has been set.</span></div>
+
+      <div class="domain">Service</div>
+      <div class="rail">
+        <span class="chip">Opened <span class="chip__n">104</span></span>
+        <span class="chip">Closed <span class="chip__n">104</span></span>
+        <span class="chip chip--warn"><i class="dot"></i>Oldest open <span class="chip__n">97d</span></span>
+        <span class="chip chip--bad"><i class="dot"></i>Over 30 days <span class="chip__n">90.9%</span></span>
+        <span class="chip chip--none"><i class="dot"></i>Unassigned <span class="chip__n">2</span></span>
+      </div>
+
+      <div class="domain">Responsiveness</div>
+      <div class="rail">
+        <span class="chip chip--bad"><i class="dot"></i>First response <span class="chip__n">8%</span></span>
+        <span class="chip chip--bad"><i class="dot"></i>Resolution <span class="chip__n">0%</span></span>
+        <span class="chip chip--none"><i class="dot"></i>Avg first reply <span class="chip__n">47147m</span></span>
+        <span class="chip chip--bad"><i class="dot"></i>Breaches <span class="chip__n">96</span></span>
+      </div>
+
+      <div class="domain">Effort</div>
+      <div class="rail">
+        <span class="chip chip--on">Billable share <span class="chip__n">99.6%</span></span>
+        <span class="chip">Billable <span class="chip__n">7,245m</span></span>
+        <span class="chip">Non-billable <span class="chip__n">30m</span></span>
+        <span class="chip chip--warn"><i class="dot"></i>Unrated entries <span class="chip__n">5</span></span>
+      </div>
+
+      <div class="domain">Money</div>
+      <div class="rail">
+        <span class="chip">Invoiced <span class="chip__n">$31,749</span></span>
+        <span class="chip">Collected <span class="chip__n">$4,439</span></span>
+        <span class="chip chip--warn"><i class="dot"></i>Outstanding <span class="chip__n">$12,198</span></span>
+        <span class="chip chip--bad"><i class="dot"></i>Overdue <span class="chip__n">$8,680</span></span>
+        <span class="chip chip--bad"><i class="dot"></i>Collection rate <span class="chip__n">14%</span></span>
+      </div>
+
+      <div class="domain">Experience &amp; commercial</div>
+      <div class="rail">
+        <span class="chip">CSAT <span class="chip__n">9.0</span></span>
+        <span class="chip">NPS <span class="chip__n">+100</span></span>
+        <span class="chip chip--none"><i class="dot"></i>Responses <span class="chip__n">1 of 1</span></span>
+        <span class="chip chip--none"><i class="dot"></i>Margin <span class="chip__n">100%</span></span>
+        <span class="chip">Recurring <span class="chip__n">$330,000</span></span>
+      </div>
+    </div>
+
+    <!-- the selected measure, with a sentence that says what it means -->
+    <div class="grid2" style="margin-top:16px">
+      <div class="card">
+        <div class="between">
+          <div>
+            <div class="domain" style="margin:0 0 4px">Selected measure · Money</div>
+            <div class="kpi bad">14%</div>
+            <p class="sec" style="margin:6px 0 0">Of the $31,749 invoiced in this period, $4,439 has been collected. <span class="bad">86% is still out.</span></p>
+          </div>
+          <button class="btn btn-secondary">Definition</button>
+        </div>
+        <div class="sub" style="margin-top:12px">Source: revenue-summary · collectionRate</div>
+        <div class="track">
+          <span class="low" title="Jun 2026"></span><span class="on" title="Jul 2026"></span>
+          <span class="on" title="Aug 2026"></span><span class="on" title="Sep 2026"></span>
+        </div>
+        <div class="row sub" style="justify-content:space-between;margin-top:6px">
+          <span>Jun 2026: $3,789 invoiced, nothing collected</span><span>Sep 2026</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="between"><span class="h">Breakdown</span>
+          <span class="sub">the same table, cut four ways</span></div>
+        <div class="chips" style="margin-top:12px">
+          <span class="chip chip--on">Client</span><span class="chip">Board</span>
+          <span class="chip">Technician</span><span class="chip">Work type</span>
+        </div>
+        <table style="margin-top:12px">
+          <thead><tr><th>Client</th><th class="num">Invoiced</th><th class="num">Open</th><th>Health</th></tr></thead>
+          <tbody>
+            <tr><td>Acme Corporation</td><td class="num">$2,712.50</td><td class="num">27</td><td><span class="badge bad">Watch</span></td></tr>
+            <tr><td>Globex Industries</td><td class="num">$1,204.00</td><td class="num">18</td><td><span class="badge warn">Watch</span></td></tr>
+            <tr><td>Initech Solutions</td><td class="num">$986.25</td><td class="num">14</td><td><span class="badge bad">At risk</span></td></tr>
+            <tr><td>Stark Enterprises</td><td class="num">$640.00</td><td class="num">9</td><td><span class="badge good">Steady</span></td></tr>
+          </tbody>
+        </table>
+        <p class="sub" style="margin:10px 0 0">Health weighs first-reply misses, tickets older than 30 days and overdue invoices. Acme is worst on age: 61 days.</p>
+      </div>
+    </div>
+
+    <!-- cash realisation: the funnel no PSA dashboard shows on one screen -->
+    <div class="card" style="margin-top:16px">
+      <div class="between">
+        <span class="h">Cash realisation</span>
+        <span class="sub">the same work, at each step it can leak</span>
+      </div>
+      <div class="funnel">
+        <div class="step"><span class="muted">Worked</span><span class="bar" style="width:100%"></span><span class="num">121.25h</span></div>
+        <div class="step"><span class="muted">Billable</span><span class="bar" style="width:99.5%"></span><span class="num">120.75h</span></div>
+        <div class="step"><span class="muted">Invoiced</span><span class="bar" style="width:8%"></span><span class="num">$3,518</span></div>
+        <div class="step"><span class="muted">Collected</span><span class="bar" style="width:0%"></span><span class="num">$0</span></div>
+      </div>
+      <p class="sub" style="margin:12px 0 0">121.25 hours were delivered against the agreements in this period. 0.5 of them carried no rate, so they add nothing to recorded value. Invoiced is low against hours because only one agreement of five has been billed — five agreements are active.</p>
+    </div>
+
+    <!-- what the period cannot tell you — the part that makes the rest trustworthy -->
+    <div class="card" style="margin-top:16px">
+      <div class="between"><span class="h">What this period cannot tell you</span><span class="sub">reported by the API, not inferred</span></div>
+      <div style="margin-top:12px">
+        <div class="note">Utilisation is not measured: <em>“Not measured — give the report a date range for a utilization percentage.”</em> Give the period real dates and this becomes a percentage.</div>
+        <div class="note"><em>“5 of the 191 listed entries carry no rate, so they add nothing to ‘recorded value’.”</em> Recorded value is therefore a floor, not the total.</div>
+        <div class="note"><em>“1 ticket has a resolution date before its creation date and was left out of the averages.”</em></div>
+        <div class="note">CSAT has one response against one resolved ticket. A quarterly business review quoted from it would be quoting a single opinion.</div>
+      </div>
+    </div>
+
+    <p class="sub" style="margin-top:14px">12 measures · 4 dimensions · 6 of 12 carry a target · figures as of 10 October 2026, 19:48</p>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════════════════════════════
+       CLASSIC
+       ══════════════════════════════════════════════════════════════════════════════════════════ -->
+  <section class="panel" id="classic">
+    <div style="margin-bottom:16px">
+      <h1 style="margin:0;font-size:20px">Reporting</h1>
+      <p class="muted" style="margin:4px 0 0">Dashboards, reports and analytics — every figure computed from the same source</p>
+    </div>
+
+    <div class="row" style="border-bottom:1px solid var(--surface-border);margin-bottom:18px">
+      <span class="btn btn-secondary" style="border-radius:8px 8px 0 0">Dashboards</span>
+      <span class="btn btn-secondary" style="border-radius:8px 8px 0 0">Standard Reports</span>
+      <span class="btn btn-secondary" style="border-radius:8px 8px 0 0">Business Reviews</span>
+      <span class="btn btn-secondary" style="border-radius:8px 8px 0 0">Custom Reports</span>
+      <span class="btn btn-primary" style="border-radius:8px 8px 0 0">Analytics</span>
+    </div>
+
+    <!-- a filter form, as the classic interface does it -->
+    <div class="card">
+      <h2 class="h" style="margin:0 0 14px">Filters</h2>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <div><label class="label">From</label><input class="input" value="2026-01-01"></div>
+        <div><label class="label">To</label><input class="input" value="2026-12-31"></div>
+        <div><label class="label">Preset</label>
+          <select class="input"><option>Custom range</option><option>This month</option><option>This quarter</option><option selected>This year</option></select></div>
+        <div><label class="label">Client</label>
+          <select class="input"><option>All clients</option><option>Acme Corporation</option><option>Globex Industries</option></select></div>
+        <div><label class="label">Board</label>
+          <select class="input"><option>All boards</option><option>MSP Service Desk</option><option>Infrastructure Desk</option></select></div>
+        <div><label class="label">Technician</label>
+          <select class="input"><option>All technicians</option><option>Sarah Jones</option></select></div>
+        <div><label class="label">Compare with</label>
+          <select class="input"><option selected>Previous period</option><option>Same period last year</option><option>No comparison</option></select></div>
+        <div style="display:flex;align-items:flex-end;gap:8px">
+          <button class="btn btn-primary" style="flex:1">Run</button>
+          <button class="btn btn-secondary">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="between"><h2 class="h" style="margin:0">Measures</h2>
+        <span class="sub">1 Jan – 31 Dec 2026 · compared with the previous period · 12 rows</span></div>
+      <table style="margin-top:12px">
+        <thead><tr><th>Measure</th><th>Group</th><th class="num">Value</th><th class="num">Target</th><th>Status</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Tickets opened</td><td>Service</td><td class="num">104</td><td class="num">—</td><td><span class="dim">No target</span></td><td class="dim">ticket-volume</td></tr>
+          <tr><td>Tickets closed</td><td>Service</td><td class="num">104</td><td class="num">—</td><td><span class="dim">No target</span></td><td class="dim">ticket-volume</td></tr>
+          <tr><td>Oldest open ticket</td><td>Service</td><td class="num">97 d</td><td class="num">≤ 30</td><td><span class="badge warn">Over</span></td><td class="dim">ticket-volume</td></tr>
+          <tr><td>Backlog over 30 days</td><td>Service</td><td class="num">90.9%</td><td class="num">≤ 20%</td><td><span class="badge bad">Breach</span></td><td class="dim">ticket-aging</td></tr>
+          <tr><td>First-response compliance</td><td>Responsiveness</td><td class="num">8%</td><td class="num">≥ 95%</td><td><span class="badge bad">Breach</span></td><td class="dim">sla-compliance</td></tr>
+          <tr><td>Resolution compliance</td><td>Responsiveness</td><td class="num">0%</td><td class="num">≥ 90%</td><td><span class="badge bad">Breach</span></td><td class="dim">sla-compliance</td></tr>
+          <tr><td>Billable share of effort</td><td>Effort</td><td class="num">99.6%</td><td class="num">≥ 75%</td><td><span class="badge good">Met</span></td><td class="dim">technician-utilization</td></tr>
+          <tr><td>Unrated time entries</td><td>Effort</td><td class="num">5</td><td class="num">0</td><td><span class="badge warn">Watch</span></td><td class="dim">time-tracking</td></tr>
+          <tr><td>Invoiced in period</td><td>Money</td><td class="num">$31,749.38</td><td class="num">—</td><td><span class="dim">No target</span></td><td class="dim">revenue-summary</td></tr>
+          <tr><td>Collection rate</td><td>Money</td><td class="num">14%</td><td class="num">≥ 90%</td><td><span class="badge bad">Breach</span></td><td class="dim">revenue-summary</td></tr>
+          <tr><td>Average CSAT score</td><td>Experience</td><td class="num">9.0</td><td class="num">≥ 4.5 / 5</td><td><span class="badge good">Met</span></td><td class="dim">csat</td></tr>
+          <tr><td>Agreement margin</td><td>Commercial</td><td class="num">100%</td><td class="num">≥ 45%</td><td><span class="badge warn">Unreliable</span></td><td class="dim">contract-profitability</td></tr>
+        </tbody>
+      </table>
+      <p class="sub" style="margin:12px 0 0">Agreement margin is 100% because no cost rate is set on any technician, so labour cost is zero. Treat it as unknown until a cost rate is recorded.</p>
+    </div>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="card">
+        <div class="between"><h2 class="h" style="margin:0">Breakdown</h2>
+          <select class="input" style="width:150px"><option selected>By client</option><option>By board</option><option>By technician</option><option>By work type</option></select></div>
+        <table style="margin-top:12px">
+          <thead><tr><th>Client</th><th class="num">Tickets</th><th class="num">Open</th><th class="num">Invoiced</th><th>Health</th></tr></thead>
+          <tbody>
+            <tr><td>Acme Corporation</td><td class="num">29</td><td class="num">27</td><td class="num">$2,712.50</td><td><span class="badge bad">At risk</span></td></tr>
+            <tr><td>Globex Industries</td><td class="num">18</td><td class="num">18</td><td class="num">$1,204.00</td><td><span class="badge warn">Watch</span></td></tr>
+            <tr><td>Initech Solutions</td><td class="num">14</td><td class="num">14</td><td class="num">$986.25</td><td><span class="badge warn">Watch</span></td></tr>
+            <tr><td>Stark Enterprises</td><td class="num">9</td><td class="num">9</td><td class="num">$640.00</td><td><span class="badge good">Steady</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2 class="h" style="margin:0 0 12px">Cash realisation</h2>
+        <table>
+          <thead><tr><th>Step</th><th class="num">Amount</th><th class="num">Share</th></tr></thead>
+          <tbody>
+            <tr><td>Worked</td><td class="num">121.25 h</td><td class="num">100%</td></tr>
+            <tr><td>Billable</td><td class="num">120.75 h</td><td class="num">99.5%</td></tr>
+            <tr><td>Invoiced</td><td class="num">$3,518.13</td><td class="num">—</td></tr>
+            <tr><td>Collected</td><td class="num">$0.00</td><td class="num">0%</td></tr>
+          </tbody>
+        </table>
+        <p class="sub" style="margin:12px 0 0">Only one of five active agreements has been billed in this period, which is why invoiced is low against the hours delivered.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2 class="h" style="margin:0 0 12px">Notes and limitations</h2>
+      <div class="note">Utilisation is not measured: “Not measured — give the report a date range for a utilization percentage.”</div>
+      <div class="note">“5 of the 191 listed entries carry no rate, so they add nothing to ‘recorded value’.”</div>
+      <div class="note">“1 ticket has a resolution date before its creation date and was left out of the averages.”</div>
+      <div class="note">CSAT coverage is 1 response against 1 resolved ticket.</div>
+      <p class="sub" style="margin-top:14px">1 Jan – 31 Dec 2026 · 12 measures · generated 10 October 2026, 19:48</p>
+    </div>
+
+    <!-- the dialog the classic interface uses for a definition -->
+    <div class="card" style="margin-top:16px;max-width:520px">
+      <div class="between"><h2 class="h" style="margin:0">Measure definition</h2><button class="btn btn-secondary">✕</button></div>
+      <p class="sec" style="margin:12px 0 0"><strong>Collection rate</strong> — collected in the period divided by invoiced in the period, as a percentage. A payment counts in the period it was received, which is why a period can collect against an invoice raised earlier.</p>
+      <table style="margin-top:12px">
+        <tbody>
+          <tr><td class="muted">Source</td><td>revenue-summary</td></tr>
+          <tr><td class="muted">Unit</td><td>percent</td></tr>
+          <tr><td class="muted">Target</td><td>at least 90%</td></tr>
+          <tr><td class="muted">Direction</td><td>higher is better</td></tr>
+        </tbody>
+      </table>
+      <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn btn-secondary">Close</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const light = html.getAttribute("data-theme") === "light";
+    html.setAttribute("data-theme", light ? "dark" : "light");
+    document.getElementById("themeBtn").textContent = light ? "Light theme" : "Dark theme";
+  }
+  function togglePanel() {
+    const modern = document.getElementById("modern").classList.contains("on");
+    document.getElementById("modern").classList.toggle("on", !modern);
+    document.getElementById("classic").classList.toggle("on", modern);
+    document.getElementById("panelBtn").textContent = modern ? "Show modern" : "Show classic";
+  }
+</script>
+</body>
+</html>

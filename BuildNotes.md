@@ -1,5 +1,5 @@
 # C7NTAX — Feature List Summary
-## Version: 2026.10.10.021 | Last Updated: 2026-10-10
+## Version: 2026.10.10.022 | Last Updated: 2026-10-10
 
 ---
 
@@ -14,6 +14,38 @@
 
 ---
 
+## 2026.10.10.022 — Analytics rebuilt as a measure-first workspace, in both interfaces
+
+The Analytics tab fetched one of the twelve datasets the API already served — revenue — and drew a bar chart
+whose bars had no width constraint. Everything else the platform computed was unreachable from the screen.
+
+- **[New]** **Twenty-one named measures over one period, in six groups** — service, responsiveness, effort,
+  money, experience and commercial. Each carries its value, a sentence saying what the number means for this
+  period, its target where one exists, a tone, and the endpoint and field it is read from. No figure is
+  recomputed: every measure comes from a builder that already serves a standard report, so a number on this
+  screen and the same number in a report cannot disagree.
+- **[New]** **A breakdown cut by client, board, technician or priority**, and for clients a 0–100 health score
+  weighing the oldest open ticket, the high-priority share, what is still outstanding and whether anything has
+  been collected. A score rather than a band because with a uniformly aged backlog every client reads the same
+  band and the column stops carrying information.
+- **[New]** **The cash-realisation funnel** — worked, billable, invoiced, collected — with the leak named at each
+  step: hours recorded as non-billable, agreement hours carrying no rate and so never able to become revenue,
+  and what is invoiced but not collected.
+- **[New]** **The period's own limitations, in the API's words.** A margin reading 100% because no technician
+  carries a cost rate is reported as *unreliable* with the reason printed under it, and utilisation that cannot
+  be computed for all time says so rather than showing a percentage. A figure that cannot be computed is
+  returned as null with its reason, never as zero.
+- **[New]** **A Help walkthrough for Analytics** with its Index row, and three FAQ entries covering the
+  utilisation, margin and health-score questions a reader will actually ask.
+- **[New]** **Four endpoints** — `/api/analytics/{catalogue,overview,breakdown,funnel}` — all on `report:view`,
+  with curated entries in the API document.
+
+**Verification:** 480 routes and 477 documented operations (four new, all guarded); `check-api-docs`,
+`check-route-guards`, `check-help-links` (36 walkthroughs) and `check-encoding` pass; `tsc` clean for the API
+and the web app. Read against the running instance in both interfaces: the modern rail showed all 21 measures
+with their real figures, and the classic form and table rendered the same numbers with the same limitations.
+
+---
 ## 2026.10.10.021 — The vault check stops starting the API, and a correction accepted
 
 Round 2 closed with no new defect, one correction to my framing, and one small change worth making. The

@@ -1,5 +1,36 @@
 [
   {
+    "version": "2026.10.10.022",
+    "date": "2026-10-10",
+    "title": "Analytics rebuilt as a measure-first workspace, in both interfaces",
+    "changes": [
+      {
+        "text": "**Twenty-one named measures over one period, in six groups** — service, responsiveness, effort,",
+        "type": "New Feature"
+      },
+      {
+        "text": "**A breakdown cut by client, board, technician or priority**, and for clients a 0–100 health score",
+        "type": "New Feature"
+      },
+      {
+        "text": "**The cash-realisation funnel** — worked, billable, invoiced, collected — with the leak named at each",
+        "type": "New Feature"
+      },
+      {
+        "text": "**The period's own limitations, in the API's words.** A margin reading 100% because no technician",
+        "type": "New Feature"
+      },
+      {
+        "text": "**A Help walkthrough for Analytics** with its Index row, and three FAQ entries covering the",
+        "type": "New Feature"
+      },
+      {
+        "text": "**Four endpoints** — `/api/analytics/{catalogue,overview,breakdown,funnel}` — all on `report:view`,",
+        "type": "New Feature"
+      }
+    ]
+  },
+  {
     "version": "2026.10.10.021",
     "date": "2026-10-10",
     "title": "The vault check stops starting the API, and a correction accepted",

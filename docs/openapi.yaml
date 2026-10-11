@@ -24,6 +24,8 @@ tags:
     description: "5 operations"
   - name: "Alerts"
     description: "6 operations"
+  - name: "Analytics"
+    description: "4 operations"
   - name: "Auth"
     description: "16 operations"
   - name: "Auth Sso"
@@ -351,6 +353,66 @@ paths:
           in: path
           required: true
           schema: { type: "string" }
+      responses:
+        "200": { description: "OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  "/api/analytics/breakdown":
+    get:
+      tags: ["Analytics"]
+      operationId: "getAnalyticsbreakdown"
+      summary: "The same figures cut by client, board, technician or priority"
+      description: "Takes `dimension` (client, board, technician or priority; anything else falls back to client so a stale bookmark still opens) plus the shared report filters, and returns the tickets per group. For the client dimension it also joins the client-value report and returns a 0-100 account-health score with the reasons behind it: how old the oldest open ticket is, how much of the load is high priority, how much of what was invoiced is still out, and whether anything has been collected. A score is returned as well as a band because with a uniformly aged backlog every client reads the same band and the column stops carrying information. health, score and reason are null for the dimensions that have no client economics behind them, rather than inventing a band. Requires report:view."
+      security: [{ "bearerAuth": [] }]
+      x-required-permissions: ["report:view"]
+      x-source: "analytics.ts · analyticsRouter.get"
+      responses:
+        "200": { description: "OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  "/api/analytics/catalogue":
+    get:
+      tags: ["Analytics"]
+      operationId: "getAnalyticscatalogue"
+      summary: "The measure catalogue: what each figure on the analytics screen means"
+      description: "The definitions behind the Analytics workspace: every measure with its label, group (service, responsiveness, effort, money, experience, commercial), unit, the sentence describing what it means and what it does not, which direction is good news, its target where one exists, and the endpoint and field it is read from. Also returns the measure groups and the four breakdown dimensions. The definitions live here rather than being written on the screen so that a figure and its explanation cannot drift apart, and the `source` field is a claim that can be checked: every measure is computed by a builder that already serves a standard report. Requires report:view."
+      security: [{ "bearerAuth": [] }]
+      x-required-permissions: ["report:view"]
+      x-source: "analytics.ts · analyticsRouter.get"
+      responses:
+        "200": { description: "OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  "/api/analytics/funnel":
+    get:
+      tags: ["Analytics"]
+      operationId: "getAnalyticsfunnel"
+      summary: "Cash realisation: worked, billable, invoiced, collected"
+      description: "The same delivered work at each step it can leak, assembled from three reports rather than recomputed: effort from time-tracking, value from technician-utilization, billing and collection from contract-profitability. Each step returns its value and a `leak` sentence naming what was lost between it and the previous step - hours recorded as non-billable, agreement hours that carry no rate and so can never become revenue, and the amount invoiced and not yet collected. The invoiced and collected steps are agreement-scoped, which `reading` states, because hours delivered against agreements are the part of the funnel that has a price attached. Requires report:view and honours the shared report filters."
+      security: [{ "bearerAuth": [] }]
+      x-required-permissions: ["report:view"]
+      x-source: "analytics.ts · analyticsRouter.get"
+      responses:
+        "200": { description: "OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+  "/api/analytics/overview":
+    get:
+      tags: ["Analytics"]
+      operationId: "getAnalyticsoverview"
+      summary: "Every measure for one period, with the period's own limitations"
+      description: "Twenty-one measures computed from the same builders the standard reports use, in one round of queries rather than nine screens. Each measure returns its value, a sentence saying what the number means for this period, and a tone derived from its target; a measure with no target is neutral rather than good, because no target means no claim. `limitations` carries the data-quality sentences the builders themselves report - a period with no date range cannot produce a utilisation percentage, entries without a rate make recorded value a floor, and a period where no technician carries a cost rate makes every margin read high - so the screen can state why a figure should not be trusted rather than showing a percentage that is 100% because nothing was measured. A measure that cannot be computed is returned as null with the reason in its reading. Honours from, to, clientId and boardId through the shared report filters, and can only narrow the caller's own scope. Requires report:view."
+      security: [{ "bearerAuth": [] }]
+      x-required-permissions: ["report:view"]
+      x-source: "analytics.ts · analyticsRouter.get"
       responses:
         "200": { description: "OK" }
         "400": { $ref: "#/components/responses/BadRequest" }
@@ -8048,5 +8110,5 @@ components:
         occurredAt: { type: string, format: date-time }
         data: { type: object, description: "Kept as it arrived, on the ticket." }
 
-# 117 of 473 operations carry a curated summary from docs/api-operations.json;
+# 121 of 477 operations carry a curated summary from docs/api-operations.json;
 # the rest are described from their own path, which is still enough to call them correctly.

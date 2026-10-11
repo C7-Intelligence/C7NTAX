@@ -20,6 +20,7 @@ import { ScheduleReportDialog } from "../components/reports/ScheduleReportDialog
 /** The filters are the viewer's to define; they stay exported here because this screen used to own them. */
 export type { FilterOptions, ReportFilters } from "../components/reports/ReportViewer";
 import { PageHeader, Tabs } from "../components/ui";
+import AnalyticsTab from "../components/analytics/AnalyticsWorkspace";
 import { useModernInterface } from "../hooks/useNavigationStyle";
 
 const TABS: Array<{ id: string; label: string; icon: LucideIcon; to: string }> = [
@@ -510,70 +511,6 @@ function KpiCard({ icon: Icon, label, value, sub, tone }: { icon: LucideIcon; la
         <p className={`text-lg font-bold ${colour}`}>{value}</p>
         {sub && <p className="text-[11px] text-gray-500 truncate">{sub}</p>}
       </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  Analytics
-// ═══════════════════════════════════════════════════════════════════
-
-function AnalyticsTab() {
-  const [revenue, setRevenue] = useState<Record<string, unknown> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showSchedule, setShowSchedule] = useState(false);
-
-  useEffect(() => {
-    api.get("/reports/data/revenue-summary").then(r => setRevenue(r.data)).catch(() => setRevenue(null)).finally(() => setLoading(false));
-  }, []);
-
-  const monthly = (revenue?.monthlyRevenue ?? []) as Array<{ month: string; invoiced: number; collected: number }>;
-  const maxMonth = Math.max(...monthly.map(m => Math.max(m.invoiced, m.collected)), 1);
-  const BAR_MAX_PX = 140;
-
-  if (loading) return <TableSkeleton />;
-
-  return (
-    <div className="space-y-5">
-      <div className="card">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2"><TrendingUp size={16} className="text-cyber-400" />Monthly revenue</h3>
-        {monthly.length > 0 ? (
-          <div className="flex items-end gap-2 h-48">
-            {monthly.map(m => (
-              <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group" title={`${m.month}: ${money(m.invoiced)} invoiced, ${money(m.collected)} collected`}>
-                <span className="text-[10px] text-gray-500 opacity-0 group-hover:opacity-100">{money(m.invoiced)}</span>
-                <div className="w-full bg-cyber-500 rounded-t hover:bg-cyber-400 transition-colors" style={{ height: `${Math.max(4, Math.round((m.invoiced / maxMonth) * BAR_MAX_PX))}px` }} />
-                <div className="w-full bg-green-500 rounded-b hover:bg-green-400 transition-colors" style={{ height: `${Math.max(2, Math.round((m.collected / maxMonth) * BAR_MAX_PX * 0.6))}px` }} />
-                <span className="text-[10px] text-gray-600">{m.month}</span>
-              </div>
-            ))}
-          </div>
-        ) : <p className="text-gray-500 text-sm">No revenue data available</p>}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="card">
-          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Financial overview</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-gray-400">Invoiced (period)</span><span className="text-white">{money(revenue?.invoicedInPeriod ?? 0)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Collected (period)</span><span className="text-green-400">{money(revenue?.collectedInPeriod ?? 0)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Outstanding</span><span className="text-amber-400">{money(revenue?.totalOutstanding ?? 0)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Overdue</span><span className="text-red-400">{money(revenue?.totalOverdue ?? 0)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-400">Collection rate</span><span className="text-cyber-400">{number(revenue?.collectionRate ?? 0)}%</span></div>
-          </div>
-        </div>
-        <div className="card">
-          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Quick actions</h3>
-          <div className="space-y-2">
-            <button onClick={() => setShowSchedule(true)} className="btn-secondary w-full text-sm flex items-center gap-2 justify-center"><Calendar size={14} />Schedule a saved report</button>
-            <Link to="/reports/standard" className="btn-secondary w-full text-sm flex items-center gap-2 justify-center"><ClipboardList size={14} />Standard Reports</Link>
-            <Link to="/reports/custom" className="btn-secondary w-full text-sm flex items-center gap-2 justify-center"><Filter size={14} />Custom Reports</Link>
-            <Link to="/reports/qbr" className="btn-secondary w-full text-sm flex items-center gap-2 justify-center"><Presentation size={14} />Quarterly business review</Link>
-          </div>
-        </div>
-      </div>
-
-      {showSchedule && <ScheduleReportDialog onClose={() => setShowSchedule(false)} />}
     </div>
   );
 }
