@@ -12443,3 +12443,59 @@ and answered it with a successful production build against the changed lockfile.
 **What went to the reviewer.** `PlanDocs/PLAN-030-Security-Sweep.md`, with the go-live briefing updated so the
 operator's own copy carries the outcome. The document asks one question — implement the export gate or remove
 the permission — and states plainly that it is the only item in the sweep that touches a file the deploy reads.
+
+---
+
+### Prompt 400 — The reviewer caught a guard I did not run
+
+**Timestamp:** 2026-10-10 23:05 | **Status:** Complete | **Duration:** —
+
+**BuildNotes IDs:** **2026.10.10.024** — The sweep broke a guard, and an override was justified by measurement.
+
+**Prompt**
+
+> Here is Claude's reply:
+>
+> Two findings from checking the sweep on `origin/main` (commit `65465c76`). First, `guard:deps` fails on `main` right now. Second, my read on `report:export` differs from the one in the sweep. I changed nothing and wrote no files.
+> **1. `guard:deps` fails.** I ran `node scripts/audit-baseline.mjs` on `main`: `x postcss-selector-parser@<7.1.6 is in package.json only`. The new override is in `package.json` and `pnpm-lock.yaml`, but not in `pnpm-workspace.yaml`. The handlebars floor went into both files in round 6, and this same guard refused your first attempt then. The fix is one line in `pnpm-workspace.yaml`. Your "ready state checked" paragraph should be re-run after the fix, because it did not catch this.
+> The rest of the dependency reading holds. I confirmed the three remaining advisories are build or packaging chains that `--prod` doesn't install. The 6 to 7 bump under `postcss-nested` is a single resolution change, and I did not rebuild the CSS to check it.
+> **2. `report:export`.** I confirmed the permission is declared and granted to three roles. Nothing in the API or web code checks it. Two things the sweep doesn't say: export does exist in the browser (`ReportViewer.tsx` offers Print, PDF, Excel and CSV with no permission check), and the permission has a planned user — `PLAN-028` assigns `ticket export … --out file.csv` to `report:export`. My read, answering the either/or: neither option as framed. Don't build the gate now (cosmetic — the data already reaches the browser under `report:view`). Don't delete the permission (PLAN-028 gives it a meaning). Fix what the role editor implies: label it as not yet enforced or hide it. Optional: an audit-log entry on export, which detects exfiltration instead of pretending to prevent it.
+
+**The guard failure was real, and the reason I missed it is the finding.** I ran the audit and four guards and
+asserted the package was unchanged on that basis. `audit-baseline.mjs` — the guard whose entire purpose is
+dependency-floor parity, and which had already refused the same shape of change at round 6 — was the one I did
+not run. So the sweep that was written to avoid unverified claims contained one: a "ready state checked"
+paragraph that outran what was checked. The same class of error I was corrected for twice in the vault-key
+round, made again in a document whose §3 table lists that exact class.
+
+**Worse: the file I broke documents why it matters.** `pnpm-workspace.yaml` carries a twenty-line comment
+explaining that pnpm 9.1.0 reads overrides only from the root `pnpm` field while pnpm 10 reads them only from the
+workspace file, that the floors are therefore declared in both on purpose, and that the two lists must stay
+identical — *"Verified by `node scripts/audit-baseline.mjs`"*. I edited one of the two files and did not run the
+verifier named in the comment directly beneath where I was working. Fixed in one line; `guard:deps` exits 0 with
+the parity line reading 14 floors in both files.
+
+**The reviewer's objection to my override was correct and I had not earned the claim.** It said the CSS had not
+been rebuilt, which was true and material: a build that *succeeds* does not show that the CSS it *emits* is the
+same, and a major-version bump under a Tailwind plugin is exactly where that distinction bites. So the question
+was settled by measurement instead of judgement — built with 7.1.6, reverted in both files, rebuilt, compared.
+The stylesheet is byte-identical: 112,302 bytes, the same content hash `659F66C6…`, and the same hash in the
+filename. That measurement is what now justifies the override, and it is recorded in the baseline with an
+instruction to re-measure at the Tailwind 4 upgrade.
+
+**And the baseline told me the decision had already been made the other way.** `security/audit-baseline.json`
+accepted all four advisories on 7 October with a reason each, and its entry for `postcss-selector-parser` says
+7.x is a breaking API change under Tailwind 3 and to revisit at Tailwind 4. So my sweep's framing of "4 found"
+was wrong twice over: they were not found, they were tracked, and my fix reversed a reasoned decision I had not
+read. Corrected in the document: what the sweep did is close one accepted advisory and retire its acceptance,
+and the baseline now reads 3 advisories, 3 accepted.
+
+**The reviewer's `report:export` reading is better than either option I offered, and I did not implement it.**
+It added two facts I lacked — export already happens in the browser with no permission check, and PLAN-028
+assigns the permission to a CLI export — which turn my either/or into a third answer: don't build a client-side
+gate, because hiding buttons the user can bypass through the network tab is the `SMTP_SECURE` shape this finding
+was raised to avoid; don't delete the permission, because it has a planned user and deleting it churns every
+role's grants; label it as not yet enforced until something does, or optionally audit-log the export so
+exfiltration is detectable rather than pretended-against. That is recorded as the agreed next step with the
+reasoning attached. I did not implement the label: it touches the role editor, I had little budget left, and
+recording an unverified UI change as done would repeat exactly the mistake this round is about.

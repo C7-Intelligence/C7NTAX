@@ -125,3 +125,112 @@ that reaches a file the deploy touches, which is why it is called out here rathe
 - **The nine remaining `await import("../index")` sites** — carried over from the vault-key round, mechanical,
   and not a security finding.
 - **PLAN-030's deploy evidence** — unchanged and still blocked on an Azure subscription and spending authority.
+
+
+---
+
+## Round 2 — corrections after review
+
+The reviewer checked this sweep on `origin/main` at `65465c76` and found one defect in it and one place where my
+reading of an existing decision was wrong. Both are recorded as corrections rather than folded quietly into the
+text above.
+
+### 1. The override broke the dependency parity guard — fixed
+
+`guard:deps` (`node scripts/audit-baseline.mjs`) failed on `main`:
+
+```
+x postcss-selector-parser@<7.1.6 is in package.json only
+An override only one package manager reads is a floor that stops applying.
+```
+
+`pnpm-workspace.yaml` carries a twenty-line comment explaining that the security floors are declared in **both**
+files on purpose — pnpm 9.1.0 (the version `packageManager` pins and the Dockerfile installs) reads overrides
+only from the root `pnpm` field of `package.json`, while pnpm 10 and later read them only from the workspace
+file — and that the two lists must stay identical. I added the override to `package.json` alone.
+
+**I missed this because I did not run the repository's own dependency guard.** The sweep's "ready state checked"
+paragraph ran `pnpm audit`, the route guard, the API-document guard, the help-link guard and the encoding guard,
+and asserted the package was unchanged on that basis. `guard:deps` was the one check written specifically to
+catch this class, and it was the one I skipped. That is the same mistake the sweep was written to avoid: a claim
+of verification that outran the verification. It is recorded here rather than corrected silently.
+
+**Fixed:** the floor is now in both files, and `guard:deps` exits 0 — *"3 advisories (0 in production), 3
+accepted"* and *"override parity: 14 security floors declared in both files"*.
+
+### 2. Corrected: none of the four advisories was a new find
+
+§2 above presents four advisories as though the sweep discovered them. It did not. `security/audit-baseline.json`
+— generated 2026-10-07 and read by `guard:deps` — already recorded **all four as accepted, each with a reason**.
+The honest statement of what this sweep did is narrower and more useful: it closed one previously accepted
+advisory and retired its acceptance. The baseline's own instructions say to remove an entry when the advisory
+stops being reported, so the entry is gone and the totals now read 3 advisories, 3 accepted, bySeverity `{high:
+2, moderate: 1}`.
+
+### 3. The baseline's decision on `postcss-selector-parser` was the opposite of mine, and I overrode it by measurement
+
+The accepted entry said:
+
+> *"Tailwind 3 depends on the 6.x line, and 7.x is a breaking API change; the advisory is a build-time parse
+> cost on our own CSS. Revisit with the Tailwind 4 upgrade."*
+
+So the decision to wait was deliberate, reasoned, and mine reversed it without having read it. The reviewer's
+objection to my override was exactly that the CSS had not been rebuilt — which is fair, because until then I had
+only shown that the build *succeeds*, and a build that succeeds does not prove the CSS it emits is the same.
+
+**The question was settled by measurement rather than judgement.** I built the stylesheet with the override in
+place, reverted the override in both files, rebuilt, and compared:
+
+| | File | Bytes | SHA-256 (first 8) |
+|---|---|---|---|
+| `postcss-selector-parser@7.1.6` | `index-CfRKbkfc.css` | 112,302 | `659F66C6` |
+| `postcss-selector-parser@6.1.4` | `index-CfRKbkfc.css` | 112,302 | `659F66C6` |
+
+**Byte-identical, including the content hash in the filename.** The 7.x API change has no effect on the CSS this
+project generates. On that evidence the override stands, and the baseline now carries the measurement and the
+instruction to re-measure at the Tailwind 4 upgrade — where the dependency moves to 7.x on its own and the floor
+becomes moot.
+
+### 4. `report:export` — the reviewer's reading is better than either of my two options
+
+The reviewer added two facts §4 above did not have, and both change the answer:
+
+- **Export exists today, in the browser.** `ReportViewer.tsx` offers Print, PDF, Excel and CSV, with no
+  permission check. So "no server-side export endpoint" is true, but users can export. What is missing is the
+  denial half of the control, not a capability.
+- **The permission has a planned user.** `PLAN-028` (the CLI, line 674) assigns `ticket export … --out file.csv`
+  to `report:export`. Deleting it would churn every role's grants and then need re-adding.
+
+**Neither of my two options was right.** The reviewer's reading is accepted, in its own terms:
+
+- **Do not build a client-side gate.** Anything that hides those buttons is cosmetic: the data already reached
+  the browser under `report:view` and a user can read it from the network tab. A browser-side gate would look
+  like a control and be one only on paper — the `SMTP_SECURE` shape again, which is precisely what this finding
+  was raised to avoid.
+- **Do not delete the permission.** PLAN-028 gives it a real meaning, and a server-side check belongs on the CLI
+  export, where the request is not already answered.
+- **Fix what the role editor implies.** Until something enforces it, label `report:export` as not yet enforced,
+  or keep it out of the editor. The codebase already has the idiom: the Roles screen carries a reasoned note
+  beside a category whose scope is not obvious, and the branding screens carry a "What is enforced today" band.
+- **Optionally, and only if a real control is wanted today:** an audit-log entry when someone exports. That
+  detects exfiltration instead of pretending to prevent it.
+
+**Not implemented.** This is a change to the permission model the operator deliberately tiered, and the
+labelling touches the role editor; I did not have the budget left to implement and verify it in both interfaces,
+and recording it as done without verifying would repeat the mistake in §1 of this section. It is written up as
+the agreed next step for whoever picks it up, with the reviewer's reasoning attached so the decision does not
+have to be re-derived.
+
+## Round 2 — the ready state, re-checked properly
+
+The §5 table claimed verification without the dependency guard, so it is restated here with the guard included
+and run:
+
+| Check | Result |
+|---|---|
+| `guard:deps` (`audit-baseline.mjs`) | **exit 0** — 3 advisories, 0 in production, 3 accepted; override parity 14 floors in both files |
+| `pnpm audit --prod` | No known vulnerabilities |
+| `check-encoding`, `check-route-guards`, `check-api-docs`, `check-help-links` | pass |
+| Web production build with the override | succeeds; stylesheet byte-identical to the pre-override build |
+| `infra/`, `scripts/azure/`, `.github/workflows/`, `Dockerfile` | untouched |
+| The four open operator decisions | unchanged |

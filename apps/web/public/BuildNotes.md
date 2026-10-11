@@ -1,5 +1,5 @@
 # C7NTAX — Feature List Summary
-## Version: 2026.10.10.023 | Last Updated: 2026-10-10
+## Version: 2026.10.10.024 | Last Updated: 2026-10-10
 
 ---
 
@@ -14,6 +14,39 @@
 
 ---
 
+## 2026.10.10.024 — The sweep broke a guard, and an override was justified by measurement
+
+The reviewer checked the sweep on `main` and found one defect in it. Both findings are recorded as corrections,
+because the first one is a claim of verification that outran the verification.
+
+- **[Fix]** **`guard:deps` failed on `main` and now passes.** The new security floor went into `package.json`
+  alone; the workspace file carries a twenty-line comment explaining that pnpm 9.1.0 and pnpm 10 read overrides
+  from different files, and that the two lists must stay identical. The floor is in both, and `guard:deps` exits
+  0 with *"override parity: 14 security floors declared in both files"*.
+- **[Update]** **The sweep skipped the one guard written to catch that class.** Its "ready state checked"
+  paragraph ran the audit and four other guards, and asserted the package was unchanged on that basis —
+  `audit-baseline.mjs` was the check it did not run. Restated in the document rather than corrected silently.
+- **[Update]** **Corrected: none of the four advisories was a new find.** `security/audit-baseline.json` already
+  accepted all four with a reason each. What the sweep actually did is narrower: it closed one previously
+  accepted advisory and retired its acceptance, and the baseline now reads 3 advisories, 3 accepted.
+- **[Fix]** **The override reverses an earlier reasoned decision, and is now justified by measurement.** The
+  baseline said 7.x is a breaking API change under Tailwind 3 and to revisit at Tailwind 4; I had only shown the
+  build succeeds, which does not prove the CSS it emits is the same. Built both ways and compared: the
+  stylesheet is **byte-identical** — 112,302 bytes, same content hash in the filename. The measurement and a
+  re-measure instruction at the Tailwind 4 upgrade are recorded in the baseline.
+- **[Update]** **`report:export` — the reviewer's reading was better than either option I offered.** Export exists
+  today in the browser with no permission check, and `PLAN-028` gives the permission a planned user, so deleting
+  it would churn every role's grants. Accepted: do not build a client-side gate (cosmetic — the data already
+  reached the browser under `report:view`), do not delete it, and label it as not yet enforced until something
+  does. **Not implemented** — it touches the role editor, and claiming it done unverified would repeat the
+  mistake above.
+
+**Verification:** `guard:deps` exit 0; `pnpm audit --prod` clean; `check-encoding`, `check-route-guards`,
+`check-api-docs` and `check-help-links` pass; the web production build succeeds with the override and its
+stylesheet is byte-identical to the pre-override build; `infra/`, `scripts/azure/`, the workflows and the
+`Dockerfile` remain untouched.
+
+---
 ## 2026.10.10.023 — Security sweep: one CVE fixed, three that cannot be, and a control that does not exist
 
 A dependency and bug-class sweep against `main` at `3a864928`, run to the operator's standing definition: CVE

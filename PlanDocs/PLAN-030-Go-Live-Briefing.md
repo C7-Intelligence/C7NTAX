@@ -172,3 +172,11 @@ A dependency and bug-class sweep was run against `main` at `3a864928`. The full 
   vulnerability — there is no server-side export endpoint — but it is a control the administration screen
   implies and the code does not implement. Implementing the gate and removing the permission are both
   decisions; see §4 of the sweep document.
+**Correction, 10 October — the sweep's first pass broke a guard and understated a decision.** The new override
+went into `package.json` alone, and `guard:deps` failed on `main` until it was added to `pnpm-workspace.yaml` as
+well; the two files must stay identical, and the dependency guard was the one check the first pass did not run.
+Corrected, and `guard:deps` now exits 0. Two further corrections are in §Round 2 of the sweep document: none of
+the four advisories was new — the baseline already accepted all four — and the override reverses an earlier
+reasoned decision to wait for Tailwind 4, which is now justified by measurement rather than by the build merely
+succeeding: the emitted stylesheet is byte-identical with 6.1.4 and 7.1.6. `report:export` is **not** yet
+changed; the reviewer's recommendation is recorded there as the agreed next step.

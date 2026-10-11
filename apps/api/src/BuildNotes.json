@@ -1,5 +1,32 @@
 [
   {
+    "version": "2026.10.10.024",
+    "date": "2026-10-10",
+    "title": "The sweep broke a guard, and an override was justified by measurement",
+    "changes": [
+      {
+        "text": "**`guard:deps` failed on `main` and now passes.** The new security floor went into `package.json`",
+        "type": "Fix"
+      },
+      {
+        "text": "**The sweep skipped the one guard written to catch that class.** Its \"ready state checked\"",
+        "type": "Update"
+      },
+      {
+        "text": "**Corrected: none of the four advisories was a new find.** `security/audit-baseline.json` already",
+        "type": "Update"
+      },
+      {
+        "text": "**The override reverses an earlier reasoned decision, and is now justified by measurement.** The",
+        "type": "Fix"
+      },
+      {
+        "text": "**`report:export` — the reviewer's reading was better than either option I offered.** Export exists",
+        "type": "Update"
+      }
+    ]
+  },
+  {
     "version": "2026.10.10.023",
     "date": "2026-10-10",
     "title": "Security sweep: one CVE fixed, three that cannot be, and a control that does not exist",

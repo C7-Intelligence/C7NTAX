@@ -3,11 +3,11 @@
   "command": "node scripts/audit-baseline.mjs --write",
   "packageManager": "9.1.0",
   "totals": {
-    "advisories": 4,
+    "advisories": 3,
     "production": 0,
     "bySeverity": {
       "high": 2,
-      "moderate": 2
+      "moderate": 1
     }
   },
   "accepted": [
@@ -28,12 +28,6 @@
       "module": "sprintf-js",
       "severity": "moderate",
       "reason": "No fix published. Reached through global-agent/roarr in @electron/get on the build machine. Build-machine only, and the format strings are the library's own."
-    },
-    {
-      "key": "postcss-selector-parser|GHSA-rj75-hqrm-r3gf",
-      "module": "postcss-selector-parser",
-      "severity": "moderate",
-      "reason": "Tailwind 3 depends on the 6.x line, and 7.x is a breaking API change; the advisory is a build-time parse cost on our own CSS. Revisit with the Tailwind 4 upgrade."
     }
   ],
   "advisories": [
@@ -78,26 +72,6 @@
       ]
     },
     {
-      "key": "postcss-selector-parser|GHSA-rj75-hqrm-r3gf",
-      "id": 1241232,
-      "module": "postcss-selector-parser",
-      "severity": "moderate",
-      "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion",
-      "vulnerableVersions": "<7.1.6",
-      "patchedVersions": ">=7.1.6",
-      "cves": [
-        "CVE-2026-104844"
-      ],
-      "ghsa": "GHSA-rj75-hqrm-r3gf",
-      "url": "https://github.com/advisories/GHSA-rj75-hqrm-r3gf",
-      "prod": false,
-      "paths": [
-        ". > postcss-selector-parser@6.1.4",
-        "apps\\web > tailwindcss@3.4.19 > postcss-nested@6.2.0 > postcss-selector-parser@6.1.4",
-        "apps\\web > tailwindcss@3.4.19 > postcss-selector-parser@6.1.4"
-      ]
-    },
-    {
       "key": "sprintf-js|GHSA-hp3w-g68c-fv3c",
       "id": 1241202,
       "module": "sprintf-js",
@@ -116,6 +90,6 @@
         "apps\\desktop > electron-builder@26.17.0 > app-builder-lib@26.17.0 > @electron/get@3.1.0 > global-agent@3.0.0 > roarr@2.15.4 > sprintf-js@1.1.3"
       ]
     }
-  ]
+  ],
+  "note": "postcss-selector-parser was closed on 2026-10-10 by pinning ^7.1.6 in both override files. Measured before closing: the built stylesheet is byte-identical with 6.1.4 and 7.1.6 (112,302 bytes, sha256 659f66c6...). Re-measure at the Tailwind 4 upgrade, where the dependency moves to 7.x on its own."
 }
-
