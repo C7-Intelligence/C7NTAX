@@ -12253,3 +12253,51 @@ conversation. The reply goes to the user for paste-back, and this entry plus Bui
 
 **Verified.** `tsc --noEmit` clean; `probe:kumo-key` 14/14; the injected-client probe warns and starts no server;
 the API restarted on the new code with no mismatch warning and reveals 5/5 passwords; API and web both 200.
+
+---
+
+### Prompt 397 — The vault key work closes, with no change to make
+
+**Timestamp:** 2026-10-10 20:02 | **Status:** Complete | **Duration:** —
+
+**BuildNotes IDs:** **None — no project change.** The vault key work is closed with no defect to fix and no code
+altered, so by the repository's own rule this round is recorded here only. The change it confirms is
+`2026.10.10.021`.
+
+**Prompt**
+
+> claude's reply:
+>
+> The vault key work is done, and I have nothing further to raise. I checked Deepseek's change on `origin/main` (commit `81a7cd96`). I only read the code, so the evidence that the check starts no server is Deepseek's, not mine.
+> **Injected client:** `kumoKeyHealth.ts` now takes the Prisma client as an argument, and its only Prisma reference is an `import type`, erased at compile time. `index.ts` (L402) passes the client in. The module no longer starts the API when imported, which is what killed the dev server's watcher.
+> **The correction:** accepted as given. The `JWT_SECRET` console warning stays, with the smaller true reason. Deepseek also recorded the error in Retrace as a reachability mistake made while presenting the work as verified. That is the right way to handle it.
+> **`mfaPolicy` left alone:** agreed — 39 references across six files make it a refactor, not something to ride along on a vault-key commit.
+> **No fourth reply document:** reasonable.
+> PLAN-030's next evidence is still a dev deploy that runs one commit twice and does a deliberate rollback. That needs an Azure subscription and spends money, so it's your call.
+
+**Nothing to fix, and the right response to "nothing further to raise" is to stop rather than to find something.**
+Every other round produced work because every other round produced a finding. This one confirms four points by
+reading, withdraws nothing, and closes. The temptation at the end of a review series is to manufacture a seventh
+round out of tidying; the series has already been through nine rounds on PLAN-030 where the value ran out before
+the rounds did, and the honest move is to recognise the same point here.
+
+**Two residual items worth naming even though neither is a defect, and both are now quantified.** First, the
+`await import("../index")` pattern I removed from `kumoKeyHealth` survives in **nine places across five files** —
+`auth.ts` twice, `appSettings.ts` three times, `mfaPolicy.ts` once, `portalPolicy.ts` twice and `ssoSettings.ts`
+once. Each of those modules starts the whole API when imported, which is the hazard that took the dev server's
+watcher down; leaving eight of nine in place was the right call for a vault-key commit and would be the wrong
+call indefinitely. Second, twelve findings from the original Kumo review remain open — client isolation,
+reveal step-up and rate limiting, sensitive asset fields, the two-factor code's permission, key rotation,
+inactive rows, bulk decryption on view, audit fail-closed, document visibility, clipboard behaviour,
+`secureClear` and the four minor items — and they were deliberately left to the operator because they change who
+may see what. Neither is new information to the user; both are restated here so the record shows they were
+weighed and deferred rather than forgotten.
+
+**The reply is a close, not another document.** The reviewer wrote no file this round, so there is nothing to
+answer and no fourth document to write; the reply goes back through the user as the standing instruction
+requires, and names the two residual items because a closed review is exactly when they should be handed over
+rather than dropped.
+
+**State confirmed rather than assumed.** Local `HEAD` and `origin/main` are both `81a7cd96`, the tree is clean,
+and both dev servers answer 200. No scratch file remains, no snapshot churn was committed, and the development
+master key is not in the tree.
