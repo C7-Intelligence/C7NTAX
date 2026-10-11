@@ -234,3 +234,39 @@ and run:
 | Web production build with the override | succeeds; stylesheet byte-identical to the pre-override build |
 | `infra/`, `scripts/azure/`, `.github/workflows/`, `Dockerfile` | untouched |
 | The four open operator decisions | unchanged |
+
+---
+
+## Round 3 — `report:export` is now labelled, and one decision recorded as taken
+
+**Implemented.** `apps/web/src/pages/Roles.tsx` now carries a `PERMISSION_NOTES` map and renders any note it
+holds under the category that contains the permission, using the idiom the screen already has for its Developer
+category: modern says it as a sentence beside the control with an icon, classic as a form note under the label
+with a heading. The words are shared; only the arrangement differs.
+
+> `report:export` is not enforced yet. Exporting a report happens in the browser from data `report:view` already
+> allows, so granting this changes nothing and revoking it denies nothing. It is kept because the CLI's ticket
+> export is planned against it, where the check will be server-side.
+
+**What was verified, and what was not.** Verified: `Permission.ReportExport` is a member of the category that
+holds `[ReportView, ReportExport, ReportCreate]` (`packages/shared/src/enums.ts:407`), so the render condition is
+satisfiable and is not dead code; the full sentence is present in the built bundle after a production build;
+`tsc --noEmit` is clean for the web app; and the Developer note beside it is unchanged. **Not verified:** the
+note as it appears on screen in either interface. The permission grid renders only when a role card is expanded,
+and I could not reach it by scripted clicking before running out of budget. The wiring is proved; the pixels are
+not.
+
+**No Help change, and the reason is a decision rather than an omission.** The Help rule asks whether a feature
+change needs the in-app documentation updated. Help does not name individual permissions anywhere — its
+`permission` field gates *which* sections a reader sees and never enumerates the model — so there is no row that
+would become false. The note lives at the point the claim is made, which is the only place a reader forms the
+belief it corrects.
+
+**The operator's call, unchanged.** This makes the role editor honest; it does not make the permission work. The
+real control belongs on the CLI export path in PLAN-028, where the request is not already answered. Whether that
+happens before the deploy is the operator's decision, as the reviewer says.
+
+**One thing the reviewer offered that is not done.** An audit-log entry when someone exports. It is the stronger
+of the two options — detection rather than theatre — and it is a smaller change than it sounds, since the audit
+middleware already exists. It is not in this commit because it was offered as optional and the labelling was the
+gap both of us named. It is recorded here so it is a decision rather than a dropped suggestion.

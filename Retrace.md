@@ -12499,3 +12499,50 @@ role's grants; label it as not yet enforced until something does, or optionally 
 exfiltration is detectable rather than pretended-against. That is recorded as the agreed next step with the
 reasoning attached. I did not implement the label: it touches the role editor, I had little budget left, and
 recording an unverified UI change as done would repeat exactly the mistake this round is about.
+
+---
+
+### Prompt 401 — The last gap closed, as far as it can honestly be closed
+
+**Timestamp:** 2026-10-10 23:20 | **Status:** Complete | **Duration:** —
+
+**BuildNotes IDs:** **2026.10.10.025** — The role editor stops offering a control that does nothing.
+
+**Prompt**
+
+> Claude's reply:
+>
+> The sweep is now closed from my side. I checked `origin/main` at `49da2d3b`. **Verified:** parity (`audit-baseline.mjs` exits cleanly, the floor is in both files); audit (3 advisories, 0 in production, all accepted, and `pnpm audit --prod` clean); deploy surface (infra, scripts/azure, workflows and Dockerfile unchanged since the sweep commit). I did not rebuild the CSS — the byte-identical result is Deepseek's own measurement, and it is the right way to justify a major-version override under a Tailwind plugin; I accept it. The corrections are accurate, including that the sweep overrode a reasoned decision without reading it. On `report:export`, I accept that it was adopted but not implemented. Hiding the buttons or deleting the permission are both worse than leaving the label as the next step. The role editor still offers a control that does nothing, and that is the remaining gap. The right next step is the "not yet enforced" note, using the idiom the Roles screen already has. Optionally, add an audit entry when someone exports. PLAN-030's status is unchanged — not deployed, next evidence is the paid dev deploy plus the four open decisions.
+
+**The reviewer named one remaining gap and it was small, so I closed it rather than recording it a second
+time.** Last round I deferred the labelling because I had little budget and would not record an unverified UI
+change as done. This round the gap was named back to me as the next step, and the honest options were to do it
+properly or to keep deferring; doing it was cheap enough. `apps/web/src/pages/Roles.tsx` now carries a
+`PERMISSION_NOTES` map and renders any note it holds under the category containing the permission, in the idiom
+the screen already uses for its Developer category — a sentence beside the control with an icon in the modern
+arrangement, a form note under the label with a heading in the classic one. The words are shared and only the
+arrangement differs, which is the rule the Developer note beside it was already following.
+
+**I verified the wiring deterministically rather than claiming the screen.** I could not reach the permission
+grid by scripted clicking — it renders only when a role card is expanded — and after last round the one thing I
+was not going to do was call a UI change done on the strength of `tsc`. So I proved the parts that are
+provable: `Permission.ReportExport` is a member of the category holding `[ReportView, ReportExport,
+ReportCreate]` (`enums.ts:407`), which is what makes the render condition satisfiable rather than dead code; and
+the full sentence is present in the built JavaScript bundle after a production build, which proves it compiles
+in and survives minification. The sweep document says exactly that, including the part that is not verified: the
+wiring is proved and the pixels are not.
+
+**The note is a decision recorded, not a control implemented, and the document says so.** Granting
+`report:export` still changes nothing and revoking it still denies nothing, because export happens in the browser
+from data `report:view` already allows. The reviewer's point — that hiding those buttons would be the
+`SMTP_SECURE` shape again, a control that looks real and is not — is now written into the note itself, because
+the next person to read that screen is the person who would otherwise be tempted to build the gate.
+
+**Two decisions taken rather than left implicit.** No Help change: Help gates which sections a reader sees and
+never enumerates the permission model, so no Help row became false, and the note belongs where the claim is
+made. And the audit-entry-on-export option is recorded as *not* done — it is the stronger of the two ideas,
+detection rather than theatre, and the audit middleware already exists, but the reviewer offered it as optional
+and the labelling was the gap we both named. Recording it keeps it a decision rather than a dropped suggestion.
+
+**The briefing was corrected rather than left stale.** It said `report:export` was "not yet changed", which
+became false the moment this landed; it now says labelled, with the limit of the verification stated.

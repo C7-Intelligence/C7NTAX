@@ -1,5 +1,28 @@
 [
   {
+    "version": "2026.10.10.025",
+    "date": "2026-10-10",
+    "title": "The role editor stops offering a control that does nothing",
+    "changes": [
+      {
+        "text": "**The Roles screen says which permissions are not enforced yet.** A `PERMISSION_NOTES` map, rendered",
+        "type": "Fix"
+      },
+      {
+        "text": "**The note is a decision recorded, not a control implemented.** Granting `report:export` still",
+        "type": "Update"
+      },
+      {
+        "text": "**`PlanDocs/PLAN-030-Security-Sweep.md` carries the reasoning and the limits of the",
+        "type": "Update"
+      },
+      {
+        "text": "**No Help change, and that is a decision.** Help gates which sections a reader sees but never",
+        "type": "Update"
+      }
+    ]
+  },
+  {
     "version": "2026.10.10.024",
     "date": "2026-10-10",
     "title": "The sweep broke a guard, and an override was justified by measurement",

@@ -36,6 +36,26 @@ const DEVELOPER_CATEGORY_REASON =
   "This category stands alone, and is not inherited by Super Admin, because it holds the only two permissions whose worst case is removing this instance's contents: developer:view opens the Developer section and developer:purge empties it. The Developer Admin role exists so that being senior is not the same as being trusted with them. " +
   DEVELOPER_ROLE_REFUSAL;
 
+/**
+ * Permissions a role can be granted that nothing enforces yet.
+ *
+ * `report:export` is the case: it is granted by this screen and read by no route, because no report is
+ * exported by the server — the browser builds Print, PDF, Excel and CSV from data the account has already
+ * been allowed to fetch under `report:view`. So granting it changes nothing, and revoking it denies nothing.
+ * That is not harmless: an administrator reads the checkbox as a control and would believe a role cannot take
+ * a report out of the product when it can, which is the same shape as a setting a screen reports and the code
+ * ignores. Saying so here is cheaper than either pretending, and honest in the place the claim is made.
+ *
+ * It stays rather than being removed because PLAN-028 gives it a real meaning: `ticket export --out file.csv`
+ * is assigned to it, and the check belongs on that server-side path, where the request is not already answered.
+ */
+const PERMISSION_NOTES: Partial<Record<Permission, string>> = {
+  [Permission.ReportExport]:
+    "report:export is not enforced yet. Exporting a report happens in the browser from data report:view already " +
+    "allows, so granting this changes nothing and revoking it denies nothing. It is kept because the CLI's " +
+    "ticket export is planned against it, where the check will be server-side.",
+};
+
 export function RolesPage() {
   const modern = useModernInterface();
   const superAdmin = useSuperAdmin();
@@ -586,6 +606,25 @@ export function RolesPage() {
                           <div className="mx-3 mb-2 border-l-2 border-red-600/40 pl-3 text-[11px] leading-relaxed text-gray-500">
                             <span className="block font-medium text-red-400">Separate on purpose</span>
                             {DEVELOPER_CATEGORY_REASON}
+                          </div>
+                        ))}
+
+                        {/*
+                          * A permission this screen can grant that nothing enforces yet. Same words in both
+                          * arrangements — modern says it as a sentence beside the control it describes,
+                          * classic as a form note under the label. Declaring it is the whole point: a checkbox
+                          * that changes nothing reads as a control, and a role editor that offers one is
+                          * making a claim the API does not keep.
+                        */}
+                        {cat.permissions.some(p => PERMISSION_NOTES[p as Permission]) && (modern ? (
+                          <p className="flex items-start gap-1.5 px-3 pb-2 text-[11px] leading-relaxed text-gray-500">
+                            <AlertTriangle size={12} className="text-amber-400 shrink-0 mt-0.5" />
+                            <span>{cat.permissions.map(p => PERMISSION_NOTES[p as Permission]).filter(Boolean).join(" ")}</span>
+                          </p>
+                        ) : (
+                          <div className="mx-3 mb-2 border-l-2 border-amber-500/40 pl-3 text-[11px] leading-relaxed text-gray-500">
+                            <span className="block font-medium text-amber-400">Not enforced yet</span>
+                            {cat.permissions.map(p => PERMISSION_NOTES[p as Permission]).filter(Boolean).join(" ")}
                           </div>
                         ))}
 

@@ -178,5 +178,4 @@ well; the two files must stay identical, and the dependency guard was the one ch
 Corrected, and `guard:deps` now exits 0. Two further corrections are in §Round 2 of the sweep document: none of
 the four advisories was new — the baseline already accepted all four — and the override reverses an earlier
 reasoned decision to wait for Tailwind 4, which is now justified by measurement rather than by the build merely
-succeeding: the emitted stylesheet is byte-identical with 6.1.4 and 7.1.6. `report:export` is **not** yet
-changed; the reviewer's recommendation is recorded there as the agreed next step.
+succeeding: the emitted stylesheet is byte-identical with 6.1.4 and 7.1.6. `report:export` is now labelled in the role editor as **not enforced yet**, with the reason, so the screen stops implying a control that does not exist. The wiring is verified — the permission sits in a rendered category and the sentence is in the built bundle — and the on-screen rendering is not. The permission itself is still unenforced: the real check belongs on the CLI export PLAN-028 plans.

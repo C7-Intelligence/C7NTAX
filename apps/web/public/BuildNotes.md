@@ -1,5 +1,5 @@
 # C7NTAX — Feature List Summary
-## Version: 2026.10.10.024 | Last Updated: 2026-10-10
+## Version: 2026.10.10.025 | Last Updated: 2026-10-10
 
 ---
 
@@ -14,6 +14,34 @@
 
 ---
 
+## 2026.10.10.025 — The role editor stops offering a control that does nothing
+
+`report:export` is granted to three roles and read by nothing, so the Roles screen showed a checkbox that
+changed nothing and an administrator would reasonably have read it as "this role cannot export". It is now
+labelled with the reason, in the idiom the screen already uses for its Developer category.
+
+- **[Fix]** **The Roles screen says which permissions are not enforced yet.** A `PERMISSION_NOTES` map, rendered
+  under the category that holds the permission — modern as a sentence beside the control with an icon, classic
+  as a form note under the label with a heading. The words are shared; only the arrangement differs, which is the
+  rule the Developer category beside it already follows.
+- **[Update]** **The note is a decision recorded, not a control implemented.** Granting `report:export` still
+  changes nothing and revoking it still denies nothing, because exporting a report happens in the browser from
+  data `report:view` already allows. A client-side gate would be cosmetics — the data has already reached the
+  browser — so the honest fix is to stop implying one. The real check belongs on the CLI's `ticket export`,
+  which `PLAN-028` already assigns to this permission and where the request is not already answered.
+- **[Update]** **`PlanDocs/PLAN-030-Security-Sweep.md` carries the reasoning and the limits of the
+  verification**, and the go-live briefing now says labelled rather than unchanged.
+- **[Update]** **No Help change, and that is a decision.** Help gates which sections a reader sees but never
+  enumerates the permission model, so no Help row became false. The note belongs where the claim is made.
+
+**Verification:** `Permission.ReportExport` is a member of the category holding `[ReportView, ReportExport,
+ReportCreate]` (`enums.ts:407`), so the render condition is satisfiable rather than dead code; the full sentence
+is present in the built bundle after a production build; `tsc --noEmit` clean; the Developer note beside it is
+unchanged. **Not verified:** the note as drawn on screen — the permission grid renders only when a role card is
+expanded and I could not reach it by scripted clicking, so the wiring is proved and the pixels are not, which is
+what the sweep document says.
+
+---
 ## 2026.10.10.024 — The sweep broke a guard, and an override was justified by measurement
 
 The reviewer checked the sweep on `main` and found one defect in it. Both findings are recorded as corrections,
