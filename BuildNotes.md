@@ -1,5 +1,5 @@
 # C7NTAX — Feature List Summary
-## Version: 2026.10.10.022 | Last Updated: 2026-10-10
+## Version: 2026.10.10.023 | Last Updated: 2026-10-10
 
 ---
 
@@ -14,6 +14,35 @@
 
 ---
 
+## 2026.10.10.023 — Security sweep: one CVE fixed, three that cannot be, and a control that does not exist
+
+A dependency and bug-class sweep against `main` at `3a864928`, run to the operator's standing definition: CVE
+checks, bug checks, fixes where a fix is safe, and the package left in the ready state the reviewer agreed.
+
+- **[Fix]** **`postcss-selector-parser` raised to 7.1.6** through `pnpm.overrides`, closing GHSA-rj75-hqrm-r3gf
+  (quadratic complexity in flat selector parsing). It is a major-version override under Tailwind's CSS pipeline,
+  so it was proved by building rather than by reasoning: the production web build completes and emits a 110 kB
+  stylesheet. The pin follows the twelve already in the manifest and is written in the `range -> target` form
+  pnpm honours.
+- **[Update]** **Three CVEs cannot be fixed and were not forced.** `http-cache-semantics`, `braces` and
+  `sprintf-js` report `patched: <0.0.0` — the advisories are open against every published version, so there is
+  nothing to upgrade to. All three sit in build or desktop-packaging chains, none is reachable from the API
+  process, and none ships: `Dockerfile:55` installs `--prod`. The action is to re-check when upstream patches.
+- **[New]** **`PlanDocs/PLAN-030-Security-Sweep.md`**, and a dated section in the go-live briefing so the
+  operator's copy carries the outcome. `pnpm audit --prod` is clean, and nothing the deploy reads has changed.
+- **[Update]** **One control reported rather than implemented: `report:export` is granted to roles and read by
+  nothing**, so a role that may read a report but not take it out of the product cannot be expressed. It is not a
+  vulnerability — there is no server-side export endpoint, and nothing is exposed that `report:view` did not
+  already allow — but an administrator looking at the role editor would reasonably believe it does something.
+  Implementing the gate and removing the permission are both decisions, so it is written up for the reviewer
+  rather than changed unilaterally.
+
+**Verification:** `pnpm audit --prod` reports no known vulnerabilities; the full audit fell from 4 findings to
+3; the production web build succeeds with the override in place; every route still carries a permission guard;
+and a search for security-shaped log messages that never reach the console now returns nothing, which is the
+last of the four defect classes this plan has produced findings in.
+
+---
 ## 2026.10.10.022 — Analytics rebuilt as a measure-first workspace, in both interfaces
 
 The Analytics tab fetched one of the twelve datasets the API already served — revenue — and drew a bar chart

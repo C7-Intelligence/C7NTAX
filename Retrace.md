@@ -12380,3 +12380,66 @@ and CVE-database checks; fix what is found unless the fix would break the app; p
 migration documents and the PLAN-030 agreement reached with the reviewer; keep the package in the same
 ready state; and if anything is found, write a response for the reviewer and update the migration documents so
 it can be reviewed. That is now the definition this session uses rather than something to re-derive each time.
+
+---
+
+### Prompt 399 — Security sweep: CVEs, bug classes, and the migration documents
+
+**Timestamp:** 2026-10-10 21:40 | **Status:** Complete | **Duration:** —
+
+**BuildNotes IDs:** **2026.10.10.023** — Security sweep: one CVE fixed, three that cannot be, and a control that does not exist.
+
+**Prompt**
+
+> After you are done:
+> Run a security sweep on the application. This includes bug checks and checks againsst the CVE database. Fix what you find, unless it will break the app. Also make sure to reference the Azure migration docs/ conversations with Claude when planning, fixing, and updating. It needs to still adhere to the plan and still be in the same ready state you left it off at when you and Claude agreed there were no more issues.
+> If you find any, create a response to claude and update those migration docs, so claude can review and respond.
+> From here on out, if I say do a security sweep, then it should include everything above
+
+**The sweep was run to a written definition rather than a remembered one.** It is recorded in
+`PlanDocs/PLAN-030-Security-Sweep.md` §1 and in this session's standing instructions, because "security sweep"
+had been a phrase with an implied scope and the operator has now made the scope explicit: CVE checks, bug
+checks, fix unless the fix breaks the application, plan and verify against PLAN-030 and the reviewer's
+agreement, stay in the ready state, and write a response for review when something is found.
+
+**Four CVEs, one fixable, and the difference was in the advisory data rather than in my judgement.** `pnpm audit
+--prod` was clean, which is the condition PLAN-030 was signed off against, so I looked at the full tree and
+found four. Reading `pnpm audit --json` rather than the summary is what made the next decision correct: three of
+them report `patched: <0.0.0`, meaning the advisory is open against every published version and there is nothing
+to upgrade to. Only `postcss-selector-parser` had a patch, so only that one could be fixed. Forcing the other
+three would have meant inventing a version that does not exist.
+
+**The one fix was a major-version override, which is exactly the kind that breaks a CSS build, so it was tested
+rather than trusted.** `postcss-selector-parser` 6 → 7 under `tailwindcss > postcss-nested@6` is the
+`unless it will break the app` clause in the operator's instruction, and the honest way to answer it was to
+apply the override and build: the production web build completes in 13.65s and emits a 110 kB stylesheet with
+the `vite:css` transform running twice. Had it failed I would have reverted and reported, and the instruction
+would have been satisfied by the attempt rather than by the change.
+
+**The bug half searched for the four defect classes this plan has actually produced findings in, rather than
+reading generally.** Every real finding in PLAN-030's history has been one of: a permission declared, granted
+and read by nothing; a setting a screen reports and the code ignores; a security warning on a channel nobody
+reads; or a flag honoured on one path and not its sibling. Two of the four came back clean, and the third —
+security-shaped log messages that never reach the console — is now clean because the vault-key round fixed the
+last two; a search that would have found them returns nothing, which is the useful half of having fixed them.
+
+**One new instance of the permission class, and I did not fix it unilaterally.** `report:export` is declared,
+granted in `ROLE_PERMISSIONS`, and read by nothing anywhere in the repository. Exporting is limited only by
+`report:view`, so a role that may read a report but not take it out of the product cannot be expressed, while
+the role editor offers the permission as though it works. It is **not** a vulnerability — there is no
+server-side export endpoint to gate, and nothing is exposed that `report:view` did not already allow — but it is
+the `SMTP_SECURE` shape: a control the administration surface implies and the code does not implement. Both
+fixes are decisions rather than patches, and one of them changes a permission model the operator deliberately
+tiered this month, so it is written up for the reviewer instead of changed quietly.
+
+**The ready state was checked rather than asserted, because that was the operator's explicit condition.**
+`infra/`, `scripts/azure/`, `.github/workflows/` and the `Dockerfile` are untouched by every commit in this
+sweep; `pnpm audit --prod` still returns no known vulnerabilities; the overrides block grew by the one line and
+follows the form pnpm actually honours, which is the failure the reviewer caught at round 7; and the four open
+operator decisions are unchanged. I called out the one thing that does reach a file the deploy reads — the new
+override changes `pnpm-lock.yaml`, which both Docker stages consume — rather than leaving it to be discovered,
+and answered it with a successful production build against the changed lockfile.
+
+**What went to the reviewer.** `PlanDocs/PLAN-030-Security-Sweep.md`, with the go-live briefing updated so the
+operator's own copy carries the outcome. The document asks one question — implement the export gate or remove
+the permission — and states plainly that it is the only item in the sweep that touches a file the deploy reads.

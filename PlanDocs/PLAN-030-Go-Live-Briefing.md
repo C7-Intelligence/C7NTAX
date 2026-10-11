@@ -148,3 +148,27 @@ For completeness, since the claim above is "compiled, not deployed":
   `/api/health` and served the queue from the new name.
 - The documentation guards (`check-help-links`, `check-api-docs`, `check-route-guards`) are green for the
   application side of the same commit.
+
+
+---
+
+## Security sweep — 10 October 2026
+
+A dependency and bug-class sweep was run against `main` at `3a864928`. The full result is
+`PlanDocs/PLAN-030-Security-Sweep.md`; what matters for the go-live decision is this:
+
+- **`pnpm audit --prod`: no known vulnerabilities.** The same result the reviewer recorded at round 9, so the
+  condition the plan was signed off against still holds.
+- **One dev-chain CVE was fixed** — `postcss-selector-parser` was bumped to 7.1.6 through `pnpm.overrides`,
+  following the twelve pins already in the manifest. It is a major-version override under Tailwind's CSS
+  pipeline, so it was proved by building: the production web build completes and emits a 110 kB stylesheet.
+- **Three dev-chain CVEs cannot be fixed** — `http-cache-semantics`, `braces` and `sprintf-js` have no patched
+  version published at all. None is reachable from the API process and none ships, because the runtime image
+  installs with `--prod`. They are re-checked when upstream patches land; there is no action to take now.
+- **Nothing the deploy reads has changed.** `infra/`, `scripts/azure/`, the workflows and the `Dockerfile` are
+  untouched, and the four open operator decisions are unchanged.
+- **One item is reported rather than fixed, and wants a decision.** `report:export` is granted to roles and read
+  by nothing, so a role that may read a report but not take it out cannot be expressed. It is not a
+  vulnerability — there is no server-side export endpoint — but it is a control the administration screen
+  implies and the code does not implement. Implementing the gate and removing the permission are both
+  decisions; see §4 of the sweep document.
