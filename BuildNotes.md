@@ -1,5 +1,5 @@
 # C7NTAX — Feature List Summary
-## Version: 2026.10.10.020 | Last Updated: 2026-10-10
+## Version: 2026.10.10.021 | Last Updated: 2026-10-10
 
 ---
 
@@ -14,6 +14,32 @@
 
 ---
 
+## 2026.10.10.021 — The vault check stops starting the API, and a correction accepted
+
+Round 2 closed with no new defect, one correction to my framing, and one small change worth making. The
+correction is recorded rather than quietly absorbed, because I had described the adjacent warning wrongly.
+
+- **[Fix]** **The startup vault check takes the Prisma client as an argument** instead of reaching for it through a
+  dynamic `import("../index")`, so importing the module no longer starts the whole API. That pattern avoids a
+  require cycle, but it cost a port conflict and a dead dev-server watcher when a probe imported the health
+  check, and it made the check impossible to test without starting a server. Proved by a probe that imports the
+  module, passes its own client and warns correctly — with no server started.
+- **[Update]** **A correction accepted.** The neighbouring `JWT_SECRET is unset` warning could never fire in
+  production: `index.ts:93` throws when `NODE_ENV=production` and the secret is unset or equals the built-in
+  default, so it only ever ran on a development machine. Moving it to the console was therefore harmless rather
+  than a security fix, and the claim that it had been "invisible in production since it was written" was wrong.
+  The console output stays for a different and smaller reason: a host that is production-like but does not set
+  `NODE_ENV=production` is exactly where the warning does fire and where nothing else would report it.
+- **[Update]** **The same injection is deliberately not applied to `mfaPolicy`** in this change. It has 39
+  references across six files, so passing the client in there is a mechanical refactor of the auth path rather
+  than a one-line fix, and it does not belong in a commit about the vault key. Recorded so the next person does
+  not rediscover the hazard and assume it was overlooked.
+
+**Verification:** the module imported and called with an injected client warns correctly (`opened 0 of 5 stored
+passwords` under a well-formed wrong key) and starts no server; `probe:kumo-key` 14/14; `tsc --noEmit` clean; the
+restarted API reveals 5/5 passwords under the master key with no mismatch warning.
+
+---
 ## 2026.10.10.020 — A warning nobody could read, and the two sentences around it
 
 Round 2 of the adversarial read found one real problem: the new vault-key mismatch warning went through

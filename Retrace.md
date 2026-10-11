@@ -12201,3 +12201,55 @@ me making it, which is worth knowing about the environment.
 **A note on working method, since the user asked for it explicitly.** From here, every reviewer message gets a
 review, an update, and a reply written in the chat for copy-paste, addressed to the reviewer. That is now the
 standing instruction rather than something to be inferred from each message.
+
+---
+
+### Prompt 396 — Round 2 closed: a correction I had to accept, and the API that started itself
+
+**Timestamp:** 2026-10-10 19:52 | **Status:** Complete | **Duration:** —
+
+**BuildNotes IDs:** **2026.10.10.021** — The vault check stops starting the API, and a correction accepted.
+
+**Prompt**
+
+> Claude's response:
+>
+> Round 2 is closed, and I found nothing new that needs a fix. I read the fix on `origin/main` (commit `e2a94e31`), including the source changes in `d19eafae`. I did not run it, so the console output and the 0-of-5 counts are Deepseek's evidence, not mine. I changed nothing and wrote no new file.
+> **Confirmed by reading:** the mismatch warning now goes to both `logger.warn` and `console.warn`; the remedy sentence points to the dry run and covers the mixed-generation case; the sample is ordered by `id` and reports its frame; the `JWT_SECRET` warning also goes to the console.
+> **One correction to the framing.** Deepseek says the "JWT_SECRET is unset" line has been invisible in production since it was written. It wasn't a production gap. `index.ts` (L93) already throws before that line when `NODE_ENV=production` and `JWT_SECRET` is unset or equals the built-in dev secret. The warning only ever fired on a development machine, so moving it to the console is harmless but not a security fix. The principle behind it still holds. It just wasn't the same defect here.
+> **The `import("../index")` hazard is real and worth acting on.** Any scratch script or test that loads `kumoKeyHealth.ts` or `mfaPolicy.ts` starts the whole API. The cleaner fix is to pass the Prisma client in as an argument from `index.ts`. That is a small, separate change, not a blocker.
+
+**The correction is right and I had it wrong, which is worth stating in the past tense.** I claimed the
+`JWT_SECRET is unset` warning had been invisible in production since it was written. It could never run in
+production at all: `index.ts:93` throws when `NODE_ENV=production` and the secret is unset or equals the
+built-in default, and the warning sits at line 98, after the throw. I had generalised from "a security warning
+on a file-only channel" to "a security gap" without checking whether the line was reachable, which is the exact
+error this whole review series exists to catch — and I made it while reporting someone else's work as verified.
+
+**The change stays, with a smaller and true justification.** A host that is production-like but does not set
+`NODE_ENV=production` is precisely where the warning does fire, and it is the same gap the reviewer identified
+in round 1 when it questioned keying the vault refusal off `NODE_ENV`. On such a host nothing else reports an
+absent signing secret, so the console output is worth having. Harmless is not the same as pointless, but it is
+not the security fix I described either.
+
+**The import hazard was real and is fixed in the module I own.** `kumoKeyHealth` no longer reaches for Prisma
+through `await import("../index")`; the client is passed in from `index.ts`, and the only Prisma reference left
+is a `import type` that is erased at compile time. Verified by importing the module, calling it with an injected
+client and watching it warn correctly — `opened 0 of 5 stored passwords` — with no server started and no port
+bound. That is the direct proof: the previous version could not be tested without starting the API, which is how
+the dev server's watcher died in the first place.
+
+**I am not applying the same change to `mfaPolicy`, and the reason is measurable rather than convenient.** It
+has **39 references across six files** — `auth.ts`, `configuration.ts`, `users.ts`, `mfaTrust.ts` and itself — so
+injecting the client there is a mechanical refactor of the auth path, not a one-line fix, and it would put a
+change to how every request resolves its MFA policy inside a commit about the vault key. It is recorded in
+BuildNotes so the next person finds a decision rather than an oversight. The reviewer's instinct that it is the
+cleaner shape is right; the timing is not.
+
+**No new reply document this round, and that is a judgement rather than an omission.** Every previous round
+produced one because every previous round produced a reviewer document to answer. This one produced a message
+with no file — the reviewer says so explicitly — so a fourth KUMO document would be ceremony around a
+conversation. The reply goes to the user for paste-back, and this entry plus BuildNotes carry the reasoning.
+
+**Verified.** `tsc --noEmit` clean; `probe:kumo-key` 14/14; the injected-client probe warns and starts no server;
+the API restarted on the new code with no mismatch warning and reveals 5/5 passwords; API and web both 200.

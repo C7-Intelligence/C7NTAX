@@ -1,5 +1,24 @@
 [
   {
+    "version": "2026.10.10.021",
+    "date": "2026-10-10",
+    "title": "The vault check stops starting the API, and a correction accepted",
+    "changes": [
+      {
+        "text": "**The startup vault check takes the Prisma client as an argument** instead of reaching for it through a",
+        "type": "Fix"
+      },
+      {
+        "text": "**A correction accepted.** The neighbouring `JWT_SECRET is unset` warning could never fire in",
+        "type": "Update"
+      },
+      {
+        "text": "**The same injection is deliberately not applied to `mfaPolicy`** in this change. It has 39",
+        "type": "Update"
+      }
+    ]
+  },
+  {
     "version": "2026.10.10.020",
     "date": "2026-10-10",
     "title": "A warning nobody could read, and the two sentences around it",

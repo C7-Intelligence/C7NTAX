@@ -14,18 +14,21 @@
  * inside the container and Azure Container Apps forwards only stdout and stderr to Log Analytics. A warning
  * nobody can read is not a warning, and this is the one that matters most.
  *
- * Prisma is imported at the point of use, because index.ts imports this module and would otherwise still be
- * assembling its exports.
+ * The client is **passed in** rather than reached through a dynamic `import("../index")`. That pattern exists
+ * to avoid a require cycle, but it has a cost that is easy to miss: importing this module then *starts the
+ * whole API*, so any probe or test that touches it binds the port and can take the dev server down with
+ * `EADDRINUSE`. Taking the client as an argument keeps this module a plain function — the type import below is
+ * erased at compile time, so nothing here loads index at runtime.
  */
+import type { PrismaClient } from "@prisma/client";
 import { decrypt, kumoKeyStatus } from "./kumoCrypto";
 import { logger } from "./logger";
 
 /** Enough rows that a wrong key is certain to show, few enough to be free at startup. */
 const SAMPLE_SIZE = 20;
 
-export async function warnIfKeyCannotOpenVault(): Promise<void> {
+export async function warnIfKeyCannotOpenVault(prisma: PrismaClient): Promise<void> {
   try {
-    const { prisma } = await import("../index");
     // Ordered, so the sample is the same set on every restart and two log lines are comparable. A vault
     // holding rows from two generations is exactly when the count is worth watching, and an unordered
     // sample would make the count wobble for no reason.

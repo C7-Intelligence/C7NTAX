@@ -395,10 +395,11 @@ server.listen(PORT, () => {
   import("./services/emailConnectorRuntime").then(r => r.hydrateEmailConnectors()).catch(() => {});
   // After the settings load, so the warning lands in a log that is already useful. Fire and forget:
   // it opens a sample of stored values and warns if the key in use is not the one they were written
-  // under (a rotated key, or a database restored from before a rotation).
+  // under (a rotated key, or a database restored from before a rotation). The client is passed in, so
+  // this module does not have to import index and cannot be loaded by a probe that starts the server.
   import("./services/appSettings")
     .then(() => import("./services/kumoKeyHealth"))
-    .then(k => k.warnIfKeyCannotOpenVault())
+    .then(k => k.warnIfKeyCannotOpenVault(prisma))
     .catch(() => {});
 });
 
